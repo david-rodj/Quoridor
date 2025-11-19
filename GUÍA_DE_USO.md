@@ -226,7 +226,7 @@ python main.py --players=Yo:Human,IA:BuildAndRunBot --fences=30
 
 | Característica | RandomBot | RunnerBotImproved | BuilderBot | BuildAndRunBot |
 |----------------|-----------|-------------------|------------|----------------|
-| **Velocidad** | ⚡ Muy rápido | ⚡ Muy rápido | 🟡 Rápido | 🟡 Moderado |
+| **Velocidad** | Muy rápido | Muy rápido | Rápido | Moderado |
 | **Complejidad** | O(1) | O(V+E) | O(n×caminos) | O(n×caminos + V+E) |
 | **Estrategia** | Ninguna | Voraz (meta) | Bloqueo | Híbrida |
 | **Fortaleza** | Débil | Media | Alta (defensa) | Muy alta |
