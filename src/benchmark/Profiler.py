@@ -112,9 +112,9 @@ class Profiler:
         # Resumen
         total_time = sum(s["total_time"] for s in Profiler.stats.values())
         total_calls = sum(s["calls"] for s in Profiler.stats.values())
-        print(f"\nTOTAL: {total_calls} calls, {total_time:.4f} seconds")
-        print(f"Top function: {sorted_stats[0][0]}")
-        print(f"Most called: {max(Profiler.stats.items(), key=lambda x: x[1]['calls'])[0]}")
+        print(f"\nTOTAL: {total_calls} llamadas, {total_time:.4f} segundos")
+        print(f"Función más costosa (Top): {sorted_stats[0][0]}")
+        print(f"Más llamada: {max(Profiler.stats.items(), key=lambda x: x[1]['calls'])[0]}")
     
     @staticmethod
     def export_json(filename='profiler_results.json'):
@@ -130,7 +130,7 @@ class Profiler:
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
         
-        print(f"Profiler data exported to {filename}")
+        print(f"Datos del profiler exportados a {filename}")
     
     @staticmethod
     def reset():
@@ -230,7 +230,7 @@ class Benchmarker:
         import random
         from src.GridCoordinates import GridCoordinates
         
-        print("\n=== BENCHMARK: PATHFINDING ===")
+        print("\n=== BENCHMARK: BÚSQUEDA DE CAMINOS ===")
         
         results = {
             "BreadthFirstSearch": [],
@@ -260,9 +260,9 @@ class Benchmarker:
         for algo, times in results.items():
             if times:
                 avg = sum(times) / len(times)
-                print(f"{algo:25} | Avg: {avg*1000:8.4f}ms | "
-                      f"Min: {min(times)*1000:8.4f}ms | "
-                      f"Max: {max(times)*1000:8.4f}ms")
+                print(f"{algo:25} | Promedio: {avg*1000:8.4f}ms | "
+                      f"Mín: {min(times)*1000:8.4f}ms | "
+                      f"Máx: {max(times)*1000:8.4f}ms")
     
     @staticmethod
     def benchmark_strategies(game, rounds=10):
@@ -295,7 +295,7 @@ class Benchmarker:
         
         # TODO: Implementar torneo completo
         
-        print("Strategy benchmarking requires full game simulation")
-        print("See Game.py for integration")
+        print("El benchmark de estrategias requiere una simulación completa del juego")
+        print("Ver `Game.py` para la integración")
         
         return results

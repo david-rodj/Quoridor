@@ -386,13 +386,13 @@ class Board(IDrawable):
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         isBlocking = False
         for player in self.game.players:
-            #print("Can player %s reach one of his goals with %s? " % (player.name, fencePlacing), end="")
+            #print("¿Puede el jugador %s alcanzar uno de sus objetivos con %s? " % (player.name, fencePlacing), end="")
             path = Path.BreadthFirstSearch(self, player.pawn.coord, player.endPositions, ignorePawns = True)
             if path is None:
                 #print("NO")
                 isBlocking = True
                 break
-            #print("YES, through %s" % path)
+            #print("SÍ, a través de %s" % path)
         self.fences.pop()
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         return isBlocking
@@ -486,7 +486,7 @@ class Board(IDrawable):
         for player in self.game.players:
             path = Path.BreadthFirstSearch(self, player.pawn.coord, player.endPositions, ignorePawns = True)
             if path is None:
-                print("Player %s is already blocked!" % (player.name))
+                print("¡El jugador %s ya está bloqueado!" % (player.name))
                 return None
             stateBefore[player.name] = len(path.moves)
         fence = Fence(self, None)

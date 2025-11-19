@@ -12,16 +12,23 @@ class IPlayer:
         self.score  = 0
         self.startPosition = None
         self.endPositions = []
+        # Preferred algorithm for this player (string):
+        # e.g. 'Greedy', 'DivideAndConquer', 'DynamicProgramming'
+        self.algorithm = None
+
+    def set_algorithm(self, algorithm_name: str):
+        """Set preferred algorithm for this player."""
+        self.algorithm = algorithm_name
 
     def play(self, board) -> IAction:
         pass
 
     def movePawn(self, coord):
-        print("player %s moved his pawn to %s" % (self.name, coord))
+        print("El jugador %s movió su peón a %s" % (self.name, coord))
         self.pawn.move(coord)
 
     def placeFence(self, coord, direction):
-        print("player %s place %s" % (self.name, FencePlacing(coord, direction)))
+        print("El jugador %s coloca %s" % (self.name, FencePlacing(coord, direction)))
         fence = self.fences.pop()
         fence.place(coord, direction)
 

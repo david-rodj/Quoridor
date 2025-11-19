@@ -61,8 +61,31 @@ class Path:
                     nextMoves.append(validMove)
         return None
 
-    def DepthFirstSearch():
-        pass
+    def DepthFirstSearch(board, startCoord, endCoords, ignorePawns = False):
+        global TRACE
+        TRACE["Path.DepthFirstSearch"] += 1
+        root = PawnMove(None, startCoord)
+
+        previousMoves = {startCoord: root}
+        nextMoves = [root]
+        validPawnMoves = board.storedValidPawnMovesIgnoringPawns if ignorePawns else board.storedValidPawnMoves
+        while nextMoves:
+            move = nextMoves.pop()
+            for endCoord in endCoords:
+                if move.toCoord == endCoord:
+                    pathMoves = [move]
+                    while move.fromCoord is not None:
+                        move = previousMoves[move.fromCoord]
+                        pathMoves.append(move)
+                    pathMoves.reverse()
+                    return Path(pathMoves[1:])
+            validMoves = validPawnMoves[move.toCoord]
+            sorted(validMoves, key=lambda validMove: Path.ManhattanDistanceMulti(validMove.toCoord, endCoords))
+            for validMove in validMoves:
+                if validMove.toCoord not in previousMoves:
+                    previousMoves[validMove.toCoord] = validMove
+                    nextMoves.append(validMove)
+        return None
 
     def Dijkstra(board, startCoord, endCoords, moveScore = lambda move, step: 1, ignorePawns = False):
         global TRACE

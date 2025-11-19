@@ -3,6 +3,7 @@ from src.action.IAction import *
 from src.Path import *
 from src.algorithm.GreedyStrategy import GreedyStrategy
 from src.benchmark.Profiler import Profiler
+from src.algorithm.DynamicProgramming import DynamicProgramming
 
 
 class RunnerBotImproved(IBot):
@@ -53,8 +54,30 @@ class RunnerBotImproved(IBot):
         
         Complejidad: O(V + E) = O(405)
         """
-        # Usar estrategia voraz explícitamente
-        move = GreedyStrategy.greedyMove(board, self)
+        # If a preferred algorithm is selected, try to use it
+        algo = getattr(self, 'algorithm', None)
+        if algo == 'DynamicProgramming':
+            # Use DP bellman-ford distances to choose neighbour that reduces distance
+            try:
+                dist = DynamicProgramming.bellmanFord(board, self.pawn.coord, self.endPositions)
+                # choose a valid move that reduces distance
+                candidates = board.storedValidPawnMoves[self.pawn.coord]
+                best = None
+                best_d = float('inf')
+                for mv in candidates:
+                    d = dist.get(mv.toCoord, float('inf'))
+                    if d < best_d:
+                        best_d = d
+                        best = mv
+                if best is not None:
+                    move = best
+                else:
+                    move = GreedyStrategy.greedyMove(board, self)
+            except Exception:
+                move = GreedyStrategy.greedyMove(board, self)
+        else:
+            # Usar estrategia voraz explícitamente
+            move = GreedyStrategy.greedyMove(board, self)
         
         if move is not None:
             # Estadísticas
@@ -156,15 +179,15 @@ class RunnerBotWithAnalysis(RunnerBotImproved):
                 "goal_distance": len(path.moves),
                 "move_chosen": str(path.firstMove()),
                 "strategy": "greedy_first_step",
-                "alternatives_evaluated": "none (greedy doesn't look ahead)"
+                "alternatives_evaluated": "ninguna (greedy no mira adelante)"
             }
             self.decision_log.append(decision)
-            
-            print(f"\n[GREEDY DECISION - Turn {self.move_count}]")
-            print(f"  Position: {self.pawn.coord}")
-            print(f"  Distance to goal: {len(path.moves)}")
-            print(f"  Chosen move: {path.firstMove()}")
-            print(f"  Reasoning: First step of BFS shortest path (GREEDY CHOICE)")
+
+            print(f"\n[DECISIÓN VORAZ - Turno {self.move_count}]")
+            print(f"  Posición: {self.pawn.coord}")
+            print(f"  Distancia al objetivo: {len(path.moves)}")
+            print(f"  Movimiento elegido: {path.firstMove()}")
+            print(f"  Razonamiento: Primer paso del camino BFS más corto (DECISIÓN VORAZ)")
         
         return super().play(board)
     
@@ -179,4 +202,4 @@ class RunnerBotWithAnalysis(RunnerBotImproved):
                 "decisions": self.decision_log,
                 "stats": self.greedy_stats
             }, f, indent=2)
-        print(f"Decision log exported to {filename}")
+        print(f"Registro de decisiones exportado a {filename}")
