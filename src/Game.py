@@ -1,4 +1,5 @@
 import random
+import time
 
 from src.Settings            import *
 from src.interface.Color     import *

@@ -1,4 +1,4 @@
-from lib.graphics            import *
+from lib.graphics_pygame     import *
 
 from src.interface.IDrawable import *
 from src.interface.Color     import *

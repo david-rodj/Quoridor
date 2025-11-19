@@ -7,6 +7,7 @@ from src.player.RandomBot      import *
 from src.player.RunnerBotImproved import *
 from src.player.BuilderBot     import *
 from src.player.BuildAndRunBot import *
+import sys
 
 
 PARAMETERS_ERROR_RETURN_CODE = 1
