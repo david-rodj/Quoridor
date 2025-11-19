@@ -26,11 +26,38 @@ Un juego de tablero tipo Quoridor implementado en Python con múltiples estrateg
 
 ### Jugadores Disponibles
 
-- **Human** - Jugador humano (controles por mouse)
-- **RandomBot** - Movimientos aleatorios
-- **RunnerBotImproved** - Estrategia voraz para llegar a la meta
-- **BuilderBot** - Estrategia para bloquear oponentes
-- **BuildAndRunBot** - Combina construcción y movimiento
+#### **Human** - Jugador Humano
+- Control manual con mouse y teclado
+- Permite interacción directa con el tablero
+- Ideal para aprender reglas o jugar contra IA
+
+#### **RandomBot** - Movimientos Aleatorios
+- Toma decisiones completamente al azar
+- 33% de probabilidad de colocar muro, resto mover peón
+- Muy rápido pero predecible
+- Útil como baseline para pruebas
+
+#### **RunnerBotImproved** - Estrategia Voraz (Greedy)
+- Siempre elige el movimiento que más reduce distancia a la meta
+- Usa BFS para encontrar camino más corto
+- Rápido (~1ms/decisión) pero puede quedar atrapado
+- Bueno contra oponentes pasivos, vulnerable a bloqueos inteligentes
+
+#### **BuilderBot** - Estrategia de Construcción
+- Calcula impacto de cada muro posible en todos los caminos
+- Elige muro que maximiza bloqueo de oponentes vs. auto-bloqueo
+- Enfocado en defensa y control del tablero
+- Más lento (~50ms/decisión) pero estratégico
+
+#### **BuildAndRunBot** - Estrategia Híbrida
+- Combina BuilderBot (colocación de muros) + RunnerBotImproved (movimiento)
+- Coloca muros cuando es ventajoso, mueve estratégicamente cuando no
+- Equilibra ofensa y defensa
+- Más desafiante (~100ms/decisión), recomendado para partidas competitivas
+
+#### **MyBot** - Plantilla Personalizada
+- Clase base vacía para implementar estrategias personalizadas
+- Hereda de IBot, permite lógica completamente custom
 
 ## Instalación
 

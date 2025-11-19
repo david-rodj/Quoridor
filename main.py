@@ -13,8 +13,23 @@ import sys
 PARAMETERS_ERROR_RETURN_CODE = 1
 
 def printUsage():
-    print("Uso: python main.py [{-h|--help}] {-p|--players=}<Nombre:TipoJugador,...> [{-r|--rounds=}<numRondas>] [{-x|--cols=}<cols>] [{-y|--rows=}<filas>] [{-f|--fences=}<murosTotales>] [{-s|--square_size=}<tamañoCuadroPx>] [{-a|--algorithm=}<Greedy|DivideAndConquer|DynamicProgramming>]")
-    print("Ejemplo: python main.py --players=Me:Human,Benoit:BuilderBot --algorithm=DivideAndConquer --square_size=32")
+    print("Uso: python main.py [opciones]\n\n"+
+          "Opciones:\n"+
+          "  -h, --help\t\t\tMostrar esta ayuda\n"+
+          "  -p, --players=\t\tLista de jugadores en formato Nombre:TipoJugador,ej: Me:Human,Benoit:BuilderBot\n"+
+          "      \t\t\tTipos disponibles:\n"+
+          "      \t\t\t  Human: Jugador humano con control por mouse/teclado\n"+
+          "      \t\t\t  RandomBot: Movimientos aleatorios, sin estrategia\n"+
+          "      \t\t\t  RunnerBotImproved: Estrategia voraz, siempre busca el camino más corto a la meta\n"+
+          "      \t\t\t  BuilderBot: Enfocado en colocar muros para bloquear oponentes\n"+
+          "      \t\t\t  BuildAndRunBot: Combina colocación de muros y movimiento estratégico\n"+
+          "  -r, --rounds=\t\tNúmero de rondas a jugar (por defecto 1)\n"+
+          "  -x, --cols=\t\tNúmero de columnas del tablero (por defecto 9)\n"+
+          "  -y, --rows=\t\tNúmero de filas del tablero (por defecto 9)\n"+
+          "  -f, --fences=\t\tTotal de muros disponibles (por defecto 20)\n"+
+          "  -s, --square_size=\tTamaño de cada casilla en píxeles (por defecto 32)\n"+
+          "  -a, --algorithm=\tAlgoritmo global para bots. Opciones: Greedy | DivideAndConquer | DynamicProgramming\n\n"+
+          "Ejemplo:\n  python main.py --players=Me:Human,Benoit:BuilderBot --algorithm=DivideAndConquer --square_size=32")
 
 def readArguments():
     try:
