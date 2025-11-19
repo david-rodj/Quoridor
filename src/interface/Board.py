@@ -267,38 +267,91 @@ class Board(IDrawable):
         return validPlacings
 
     def isValidFencePlacing(self, coord, direction):
+        """
+        Verifica si un muro puede colocarse en la posición dada.
+        
+        REGLA CRÍTICA DE QUORIDOR:
+        Nunca se puede colocar un muro que bloquee COMPLETAMENTE 
+        el camino de cualquier jugador hacia su meta.
+        
+        Verificaciones:
+        1. El muro no está fuera de límites
+        2. El muro no se cruza con otro muro
+        3. El muro no sobrepone otro muro existente
+        4. CRÍTICO: Después de colocar el muro, TODOS los jugadores
+        aún tienen al menos un camino válido hacia su meta
+        """
         global TRACE
         TRACE["Board.isValidFencePlacing"] += 1
-        checkedFence = Fence(self, None)
-        checkedFence.coord = coord
-        checkedFence.direction = direction
-        if not self.isAtTopEdge(coord) and not self.isAtRightEdge(coord) and direction == Fence.DIRECTION.HORIZONTAL and not self.hasFenceAtTop(coord) and not self.hasFenceAtTop(coord.right()):
+        
+        # Validación 1: Límites del tablero
+        if direction == Fence.DIRECTION.HORIZONTAL:
+            # Muro horizontal necesita espacio en top y right
+            if self.isAtTopEdge(coord) or self.isAtRightEdge(coord):
+                return False
+            # Verificar que no haya muros en las dos posiciones que ocuparía
+            if self.hasFenceAtTop(coord) or self.hasFenceAtTop(coord.right()):
+                return False
+        elif direction == Fence.DIRECTION.VERTICAL:
+            # Muro vertical necesita espacio en left y bottom
+            if self.isAtLeftEdge(coord) or self.isAtBottomEdge(coord):
+                return False
+            # Verificar que no haya muros en las dos posiciones que ocuparía
+            if self.hasFenceAtLeft(coord) or self.hasFenceAtLeft(coord.bottom()):
+                return False
+        else:
+            return False
+        
+        # Validación 2: No cruzarse con muro perpendicular
+        if direction == Fence.DIRECTION.HORIZONTAL:
+            # Un muro horizontal en coord bloquea entre coord y coord.top()
+            # Se cruza con un muro vertical en coord.top().right()
             crossingFenceCoord = coord.top().right()
             for fence in self.fences:
                 if fence.coord == crossingFenceCoord and fence.direction == Fence.DIRECTION.VERTICAL:
-                    self.fences.pop()
                     return False
-            self.fences.append(checkedFence)
-            for player in self.game.players:
-                if Path.BreadthFirstSearch(self, player.pawn.coord, player.endPositions) is None:
-                    self.fences.pop()
-                    return False
-            self.fences.pop()
-            return True
-        if not self.isAtLeftEdge(coord) and not self.isAtBottomEdge(coord) and direction == Fence.DIRECTION.VERTICAL and not self.hasFenceAtLeft(coord) and not self.hasFenceAtLeft(coord.bottom()):
+        else:  # VERTICAL
+            # Un muro vertical en coord bloquea entre coord y coord.left()
+            # Se cruza con un muro horizontal en coord.bottom().left()
             crossingFenceCoord = coord.bottom().left()
             for fence in self.fences:
                 if fence.coord == crossingFenceCoord and fence.direction == Fence.DIRECTION.HORIZONTAL:
-                    self.fences.pop()
                     return False
-            self.fences.append(checkedFence)
-            for player in self.game.players:
-                if Path.BreadthFirstSearch(self, player.pawn.coord, player.endPositions) is None:
-                    self.fences.pop()
-                    return False
-            self.fences.pop()
-            return True
-        return False
+        
+        # Validación 3: CRÍTICA - Verificar que no bloquee completamente a ningún jugador
+        # Simular colocación del muro temporalmente
+        checkedFence = Fence(self, None)
+        checkedFence.coord = coord
+        checkedFence.direction = direction
+        self.fences.append(checkedFence)
+        
+        # IMPORTANTE: Actualizar movimientos válidos para reflejar el nuevo muro
+        # (esto es crítico para que BFS encuentre caminos correctamente)
+        self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
+        
+        # Verificar que CADA jugador aún tenga al menos un camino válido
+        all_players_have_path = True
+        for player in self.game.players:
+            # Buscar camino ignorando otros peones (solo considerando muros)
+            path = Path.BreadthFirstSearch(
+                self, 
+                player.pawn.coord, 
+                player.endPositions, 
+                ignorePawns=True
+            )
+            
+            if path is None:
+                # Este jugador quedaría bloqueado - muro NO válido
+                all_players_have_path = False
+                if DEBUG:
+                    print(f"⚠️  Muro {direction.name} en {coord} bloquearía completamente a {player.name}")
+                break
+        
+        # Remover muro temporal y restaurar estado
+        self.fences.pop()
+        self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
+        
+        return all_players_have_path
 
     def displayValidFencePlacings(self, player, validPlacings = None):
         if not INTERFACE:
@@ -504,3 +557,133 @@ class Board(IDrawable):
         self.fences.pop()
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         return impact
+    
+    def test_blocking_scenario():
+        """
+        Prueba el escenario del log donde M (rojo) en 4,3 y O (azul) en 4,5
+        con muros ya colocados, e intenta colocar H-fence at 7,3
+        """
+        from src.Game import Game
+        from src.player.Human import Human
+        from src.GridCoordinates import GridCoordinates
+        from src.interface.Fence import Fence
+        
+        # Crear juego de prueba
+        game = Game([Human("M"), Human("O")], cols=9, rows=9)
+        board = game.board
+        
+        # Simular estado del log
+        # M en 4,3 (fila 3, columna 4 en índices 0-based)
+        game.players[0].pawn.coord = GridCoordinates(3, 2)  # col, row (0-based)
+        
+        # O en 4,5 (fila 5, columna 4)
+        game.players[1].pawn.coord = GridCoordinates(3, 4)
+        
+        # Colocar muros del log (convertir a 0-based)
+        existing_walls = [
+            ("H", GridCoordinates(4, 2)),  # H-fence at 5,3
+            ("H", GridCoordinates(3, 5)),  # H-fence at 4,6
+            ("H", GridCoordinates(2, 2)),  # H-fence at 3,3
+            ("V", GridCoordinates(2, 2)),  # V-fence at 3,3
+            ("V", GridCoordinates(2, 4)),  # V-fence at 3,5
+            ("V", GridCoordinates(2, 6)),  # V-fence at 3,7
+        ]
+        
+        for direction_str, coord in existing_walls:
+            direction = Fence.DIRECTION.HORIZONTAL if direction_str == "H" else Fence.DIRECTION.VERTICAL
+            fence = Fence(board, game.players[0])
+            fence.coord = coord
+            fence.direction = direction
+            board.fences.append(fence)
+        
+        # Actualizar movimientos válidos
+        board.initStoredValidActions()
+        
+        # PRUEBA: Intentar colocar H-fence at 7,3 (coord 6,2 en 0-based)
+        test_coord = GridCoordinates(6, 2)
+        test_direction = Fence.DIRECTION.HORIZONTAL
+        
+        is_valid = board.isValidFencePlacing(test_coord, test_direction)
+        
+        print(f"\n{'='*60}")
+        print(f"PRUEBA: H-fence at 7,3 (coord {test_coord})")
+        print(f"¿Es válido? {is_valid}")
+        print(f"{'='*60}\n")
+        
+        if is_valid:
+            print("❌ ERROR: El muro debería ser INVÁLIDO (bloquea al jugador O)")
+        else:
+            print("CORRECTO: El muro es inválido como debería ser")
+        
+        # Verificar caminos de ambos jugadores
+        for i, player in enumerate(game.players):
+            path = Path.BreadthFirstSearch(
+                board,
+                player.pawn.coord,
+                player.endPositions,
+                ignorePawns=True
+            )
+            if path:
+                print(f"Jugador {player.name}: Tiene camino (longitud {len(path.moves)})")
+            else:
+                print(f"Jugador {player.name}: SIN CAMINO")
+        
+        return is_valid
+
+
+    # Función de debugging adicional
+    def visualize_blocking_check(board, coord, direction, player):
+        """
+        Visualiza por qué un muro bloquea o no a un jugador.
+        Útil para debugging.
+        """
+        print(f"\n{'='*70}")
+        print(f"ANÁLISIS DE BLOQUEO: {direction.name} fence at {coord}")
+        print(f"Jugador: {player.name} en {player.pawn.coord}")
+        print(f"Objetivos: {[str(g) for g in player.endPositions]}")
+        print(f"{'='*70}")
+        
+        # Estado ANTES del muro
+        path_before = Path.BreadthFirstSearch(
+            board,
+            player.pawn.coord,
+            player.endPositions,
+            ignorePawns=True
+        )
+        
+        if path_before:
+            print(f"ANTES del muro: Camino de longitud {len(path_before.moves)}")
+            print(f"  Ruta: {path_before}")
+        else:
+            print(f"ANTES del muro: Ya está bloqueado")
+        
+        # Simular muro
+        temp_fence = Fence(board, None)
+        temp_fence.coord = coord
+        temp_fence.direction = direction
+        board.fences.append(temp_fence)
+        board.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
+        
+        # Estado DESPUÉS del muro
+        path_after = Path.BreadthFirstSearch(
+            board,
+            player.pawn.coord,
+            player.endPositions,
+            ignorePawns=True
+        )
+        
+        if path_after:
+            print(f"DESPUÉS del muro: Camino de longitud {len(path_after.moves)}")
+            print(f"  Ruta: {path_after}")
+            print(f"  Impacto: +{len(path_after.moves) - len(path_before.moves)} movimientos")
+        else:
+            print(f"DESPUÉS del muro: BLOQUEADO COMPLETAMENTE")
+            print(f"  Este muro NO es válido según las reglas de Quoridor")
+        
+        # Limpiar
+        board.fences.pop()
+        board.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
+        
+        print(f"{'='*70}\n")
+        
+        return path_after is not None
