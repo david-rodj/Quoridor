@@ -29,6 +29,7 @@ Controla la partida manualmente con el ratón:
 
 **Ventajas**: Control total, aprendizaje de estrategias
 **Desventajas**: Requiere atención constante
+**Algoritmos**: No soporta (control manual)
 
 **Ejemplos de uso:**
 ```bash
@@ -51,6 +52,7 @@ La IA toma decisiones completamente al azar:
 **Ventajas**: Muy rápido, impredecible
 **Desventajas**: Sin estrategia, fácil de vencer
 **Uso**: Baseline para pruebas, aprendizaje básico
+**Algoritmos**: No soporta (acciones aleatorias)
 
 **Ejemplos de uso:**
 ```bash
@@ -74,6 +76,7 @@ Siempre elige el movimiento que más reduce la distancia a la meta:
 **Ventajas**: Rápido (~1ms/decisión), directo a la meta
 **Desventajas**: No anticipa bloqueos, vulnerable a trampas
 **Uso**: Bueno contra oponentes pasivos, desafiante pero predecible
+**Algoritmos**: Greedy (por defecto), DynamicProgramming
 
 **Ejemplos de uso:**
 ```bash
@@ -100,6 +103,7 @@ Se enfoca en colocar muros estratégicos:
 **Ventajas**: Excelente defensa, controla el tablero
 **Desventajas**: Más lento (~50ms/decisión), no agresivo en movimiento
 **Uso**: Contra oponentes que avanzan directamente, estrategia defensiva
+**Algoritmos**: DivideAndConquer (recomendado), DynamicProgramming, Greedy
 
 **Ejemplos de uso:**
 ```bash
@@ -126,6 +130,7 @@ Mejor bot disponible, combina ofensa y defensa:
 **Ventajas**: Completo, desafiante (~100ms/decisión), adaptable
 **Desventajas**: Más lento que bots especializados
 **Uso**: Partidas competitivas, desafíos, mejor experiencia de juego
+**Algoritmos**: DivideAndConquer (recomendado), DynamicProgramming, Greedy
 
 **Ejemplos de uso:**
 ```bash
@@ -152,6 +157,7 @@ Clase base vacía para implementar tu propia estrategia:
 - Permite experimentación con algoritmos propios
 
 **Uso**: Desarrollo de nuevas estrategias de IA
+**Algoritmos**: Depende de implementación (por defecto ninguno)
 
 **Ejemplos de uso:**
 ```bash
