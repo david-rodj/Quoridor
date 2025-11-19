@@ -19,10 +19,29 @@ class Board(IDrawable):
         self.game = game
         self.cols,       self.rows      = cols,       rows
         self.squareSize, self.innerSize = squareSize, innerSize
+
+        # Márgenes para estadísticas y coordenadas
+        self.margin_top = 80  # Para estadísticas de jugadores
+        self.margin_left = 50  # Para coordenadas verticales
+        self.margin_right = 50  # Para balance
+        self.margin_bottom = 50  # Para coordenadas horizontales
+
+        # Tamaño del tablero
+        board_width = squareSize*cols + innerSize*(cols - 1)
+        board_height = squareSize*rows + innerSize*(rows - 1)
+
+        # Tamaño total de la ventana
+        self.width = board_width + self.margin_left + self.margin_right
+        self.height = board_height + self.margin_top + self.margin_bottom
+
+        # Offset para el tablero
+        self.board_offset_x = self.margin_left
+        self.board_offset_y = self.margin_top
+
         self.grid = [[Square(self, GridCoordinates(col, row)) for row in range(rows)] for col in range(cols)]
-        self.width, self.height = squareSize*cols + innerSize*(cols - 1), squareSize*rows + innerSize*(rows - 1)
+        
         if INTERFACE:
-            self.window = GraphWin("Quoridor", self.width, self.height)
+            self.window = GraphWin("Quoridor - Tablero de Madera", self.width, self.height)
         self.pawns  = []
         self.fences = []
         self.firstCol  = 0
@@ -31,6 +50,22 @@ class Board(IDrawable):
         self.firstRow  = 0
         self.middleRow = int((self.rows - 1)/2)
         self.lastRow   = self.rows - 1
+        
+        # Colores estilo madera
+        self.wood_dark = "#654321"
+        self.wood_light = "#8B6914"
+        self.wood_border = "#4A3319"
+        self.square_light = "#F5DEB3"
+        self.square_dark = "#DEB887"
+        self.text_color = "#2F1B0E"
+        
+        # Fuente para números
+        if INTERFACE:
+            import pygame
+            pygame.font.init()
+            self.coord_font = pygame.font.SysFont('Arial', 16, bold=True)
+            self.stat_font = pygame.font.SysFont('Arial', 14, bold=True)
+            self.stat_font_small = pygame.font.SysFont('Arial', 12)
 
     def initStoredValidActions(self):
         self.storedValidFencePlacings, self.storedValidPawnMoves, self.storedValidPawnMovesIgnoringPawns = [], {}, {}
@@ -44,37 +79,37 @@ class Board(IDrawable):
                 coordValidPawnMoves, coordValidPawnMovesIgnoringPawns = [], []
                 if col != self.firstCol:
                     coordValidPawnMovesIgnoringPawns.append(PawnMove(coord, coord.left()))
-                    if col == self.firstCol + 1 and row == self.middleRow: # left pawn
+                    if col == self.firstCol + 1 and row == self.middleRow:
                         coordValidPawnMoves.append(PawnMove(coord, coord.left().top(),    coord.left()))
                         coordValidPawnMoves.append(PawnMove(coord, coord.left().bottom(), coord.left()))
-                    elif col == self.middleCol + 1 and (row == self.firstRow or row == self.lastRow): # top and bottom pawns
+                    elif col == self.middleCol + 1 and (row == self.firstRow or row == self.lastRow):
                         coordValidPawnMoves.append(PawnMove(coord, coord.left().left(), coord.left()))
                     else:
                         coordValidPawnMoves.append(PawnMove(coord, coord.left()))
                 if col != self.lastCol:
                     coordValidPawnMovesIgnoringPawns.append(PawnMove(coord, coord.right()))
-                    if col == self.lastCol - 1 and row == self.middleRow: # right pawn
+                    if col == self.lastCol - 1 and row == self.middleRow:
                         coordValidPawnMoves.append(PawnMove(coord, coord.right().top(),    coord.right()))
                         coordValidPawnMoves.append(PawnMove(coord, coord.right().bottom(), coord.right()))
-                    elif col == self.middleCol - 1 and (row == self.firstRow or row == self.lastRow): # top and bottom pawns
+                    elif col == self.middleCol - 1 and (row == self.firstRow or row == self.lastRow):
                         coordValidPawnMoves.append(PawnMove(coord, coord.right().right(), coord.right()))
                     else:
                         coordValidPawnMoves.append(PawnMove(coord, coord.right()))
                 if row != self.firstRow:
                     coordValidPawnMovesIgnoringPawns.append(PawnMove(coord, coord.top()))
-                    if col == self.middleCol and row == self.firstRow + 1: # top pawn
+                    if col == self.middleCol and row == self.firstRow + 1:
                         coordValidPawnMoves.append(PawnMove(coord, coord.top().left(),  coord.top()))
                         coordValidPawnMoves.append(PawnMove(coord, coord.top().right(), coord.top()))
-                    elif (col == self.firstCol or col == self.lastCol) and row == self.middleRow + 1: # left and right pawns
+                    elif (col == self.firstCol or col == self.lastCol) and row == self.middleRow + 1:
                         coordValidPawnMoves.append(PawnMove(coord, coord.top().top(), coord.top()))
                     else:
                         coordValidPawnMoves.append(PawnMove(coord, coord.top()))
                 if row != self.lastRow:
                     coordValidPawnMovesIgnoringPawns.append(PawnMove(coord, coord.bottom()))
-                    if col == self.middleCol and row == self.lastRow - 1: # bottom pawn
+                    if col == self.middleCol and row == self.lastRow - 1:
                         coordValidPawnMoves.append(PawnMove(coord, coord.bottom().left(),  coord.bottom()))
                         coordValidPawnMoves.append(PawnMove(coord, coord.bottom().right(), coord.bottom()))
-                    elif (col == self.firstCol or col == self.lastCol) and row == self.middleRow - 1: # left and right pawns
+                    elif (col == self.firstCol or col == self.lastCol) and row == self.middleRow - 1:
                         coordValidPawnMoves.append(PawnMove(coord, coord.bottom().bottom(), coord.bottom()))
                     else:
                         coordValidPawnMoves.append(PawnMove(coord, coord.bottom()))
@@ -83,13 +118,139 @@ class Board(IDrawable):
     def draw(self):
         if not INTERFACE:
             return
-        background = Rectangle(Point(0, 0), Point(self.width, self.height))
-        background.setFill(Color.WHITE.value)
-        background.setWidth(0)
-        background.draw(self.window)
+        
+        import pygame
+        surface = self.window.surface
+        
+        # Fondo estilo madera oscura
+        surface.fill(pygame.Color(self.wood_dark))
+        
+        # Borde decorativo del tablero
+        border_rect = pygame.Rect(
+            self.board_offset_x - 10,
+            self.board_offset_y - 10,
+            self.squareSize*self.cols + self.innerSize*(self.cols - 1) + 20,
+            self.squareSize*self.rows + self.innerSize*(self.rows - 1) + 20
+        )
+        pygame.draw.rect(surface, pygame.Color(self.wood_border), border_rect, 5)
+        
+        # Fondo del tablero (madera clara)
+        board_rect = pygame.Rect(
+            self.board_offset_x,
+            self.board_offset_y,
+            self.squareSize*self.cols + self.innerSize*(self.cols - 1),
+            self.squareSize*self.rows + self.innerSize*(self.rows - 1)
+        )
+        pygame.draw.rect(surface, pygame.Color(self.wood_light), board_rect)
+        
+        # Dibujar casillas
         for col in range(self.cols):
             for row in range(self.rows):
                 self.grid[col][row].draw()
+        
+        # Dibujar coordenadas estilo ajedrez
+        self._draw_coordinates()
+        
+        # Dibujar estadísticas de jugadores
+        self._draw_player_stats()
+        
+        pygame.display.flip()
+
+    def _draw_coordinates(self):
+        """Dibuja las coordenadas estilo ajedrez (A-I, 1-9)"""
+        if not INTERFACE:
+            return
+        
+        import pygame
+        surface = self.window.surface
+        
+        # Letras horizontales (A, B, C, ...)
+        for col in range(self.cols):
+            letter = chr(65 + col)  # A=65 en ASCII
+            x = self.board_offset_x + col * (self.squareSize + self.innerSize) + self.squareSize // 2
+            
+            # Arriba del tablero
+            y_top = self.board_offset_y - 25
+            text_surface = self.coord_font.render(letter, True, pygame.Color(self.square_light))
+            text_rect = text_surface.get_rect(center=(x, y_top))
+            surface.blit(text_surface, text_rect)
+            
+            # Abajo del tablero
+            y_bottom = self.board_offset_y + self.squareSize*self.rows + self.innerSize*(self.rows - 1) + 25
+            text_surface = self.coord_font.render(letter, True, pygame.Color(self.square_light))
+            text_rect = text_surface.get_rect(center=(x, y_bottom))
+            surface.blit(text_surface, text_rect)
+        
+        # Números verticales (1, 2, 3, ...)
+        for row in range(self.rows):
+            number = str(row + 1)
+            y = self.board_offset_y + row * (self.squareSize + self.innerSize) + self.squareSize // 2
+            
+            # Izquierda del tablero
+            x_left = self.board_offset_x - 25
+            text_surface = self.coord_font.render(number, True, pygame.Color(self.square_light))
+            text_rect = text_surface.get_rect(center=(x_left, y))
+            surface.blit(text_surface, text_rect)
+            
+            # Derecha del tablero
+            x_right = self.board_offset_x + self.squareSize*self.cols + self.innerSize*(self.cols - 1) + 25
+            text_surface = self.coord_font.render(number, True, pygame.Color(self.square_light))
+            text_rect = text_surface.get_rect(center=(x_right, y))
+            surface.blit(text_surface, text_rect)
+
+    def _draw_player_stats(self):
+        """Dibuja las estadísticas de cada jugador (turno y muros restantes)"""
+        if not INTERFACE:
+            return
+        
+        import pygame
+        surface = self.window.surface
+        
+        num_players = len(self.game.players)
+        section_width = self.width // num_players
+        
+        for i, player in enumerate(self.game.players):
+            x_center = section_width * i + section_width // 2
+            y_base = 30
+            
+            # Cuadro de fondo para cada jugador
+            box_rect = pygame.Rect(
+                section_width * i + 10,
+                10,
+                section_width - 20,
+                60
+            )
+            # Color de fondo según el jugador
+            bg_color = self._hex_to_rgb(player.color.value)
+            bg_color_light = tuple(min(255, c + 80) for c in bg_color)
+            pygame.draw.rect(surface, bg_color_light, box_rect, border_radius=8)
+            pygame.draw.rect(surface, bg_color, box_rect, 3, border_radius=8)
+            
+            # Nombre del jugador
+            name_text = self.stat_font.render(player.name, True, pygame.Color(self.text_color))
+            name_rect = name_text.get_rect(center=(x_center, y_base - 5))
+            surface.blit(name_text, name_rect)
+            
+            # Icono y cantidad de muros
+            fences_remaining = player.remainingFences()
+            fences_text = f"🧱 {fences_remaining}"
+            fences_surface = self.stat_font_small.render(fences_text, True, pygame.Color(self.text_color))
+            fences_rect = fences_surface.get_rect(center=(x_center, y_base + 15))
+            surface.blit(fences_surface, fences_rect)
+            
+            # Indicador del jugador actual
+            if hasattr(self.game, 'current_player_index'):
+                if self.game.players[self.game.current_player_index] == player:
+                    # Dibujar flecha o indicador
+                    indicator_text = "◀▶"
+                    indicator_surface = self.stat_font.render(indicator_text, True, pygame.Color("#FFD700"))
+                    indicator_rect = indicator_surface.get_rect(center=(x_center, y_base + 35))
+                    surface.blit(indicator_surface, indicator_rect)
+
+    def _hex_to_rgb(self, hex_color):
+        """Convierte color hex a tupla RGB"""
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def startPosition(self, playerIndex) -> GridCoordinates:
         switcher = {
@@ -226,7 +387,7 @@ class Board(IDrawable):
         global TRACE
         TRACE["Board.isValidPawnMove"] += 1
         if validMoves is None:
-            validMoves = self.storedValidPawnMovesIgnoringPawns[fromCoord] if ignorePawns else self.storedValidPawnMoves[fromCoord] #self.validPawnMoves(fromCoord)
+            validMoves = self.storedValidPawnMovesIgnoringPawns[fromCoord] if ignorePawns else self.storedValidPawnMoves[fromCoord]
         for validMove in validMoves:
             if validMove.toCoord == toCoord:
                 return True
@@ -236,7 +397,7 @@ class Board(IDrawable):
         if not INTERFACE:
             return
         if validMoves is None:
-            validMoves = self.storedValidPawnMoves[player.pawn.coord] #self.validPawnMoves(player.pawn.coord)
+            validMoves = self.storedValidPawnMoves[player.pawn.coord]
         for validMove in validMoves:
             possiblePawn = Pawn(self, player)
             possiblePawn.coord = validMove.toCoord.clone()
@@ -247,7 +408,7 @@ class Board(IDrawable):
         if not INTERFACE:
             return
         if validMoves is None:
-            validMoves = self.storedValidPawnMoves[player.pawn.coord] #self.validPawnMoves(player.pawn.coord)
+            validMoves = self.storedValidPawnMoves[player.pawn.coord]
         for validMove in validMoves:
             possiblePawn = Pawn(self, player)
             possiblePawn.coord = validMove.toCoord.clone()
@@ -267,72 +428,42 @@ class Board(IDrawable):
         return validPlacings
 
     def isValidFencePlacing(self, coord, direction):
-        """
-        Verifica si un muro puede colocarse en la posición dada.
-        
-        REGLA CRÍTICA DE QUORIDOR:
-        Nunca se puede colocar un muro que bloquee COMPLETAMENTE 
-        el camino de cualquier jugador hacia su meta.
-        
-        Verificaciones:
-        1. El muro no está fuera de límites
-        2. El muro no se cruza con otro muro
-        3. El muro no sobrepone otro muro existente
-        4. CRÍTICO: Después de colocar el muro, TODOS los jugadores
-        aún tienen al menos un camino válido hacia su meta
-        """
         global TRACE
         TRACE["Board.isValidFencePlacing"] += 1
         
-        # Validación 1: Límites del tablero
         if direction == Fence.DIRECTION.HORIZONTAL:
-            # Muro horizontal necesita espacio en top y right
             if self.isAtTopEdge(coord) or self.isAtRightEdge(coord):
                 return False
-            # Verificar que no haya muros en las dos posiciones que ocuparía
             if self.hasFenceAtTop(coord) or self.hasFenceAtTop(coord.right()):
                 return False
         elif direction == Fence.DIRECTION.VERTICAL:
-            # Muro vertical necesita espacio en left y bottom
             if self.isAtLeftEdge(coord) or self.isAtBottomEdge(coord):
                 return False
-            # Verificar que no haya muros en las dos posiciones que ocuparía
             if self.hasFenceAtLeft(coord) or self.hasFenceAtLeft(coord.bottom()):
                 return False
         else:
             return False
         
-        # Validación 2: No cruzarse con muro perpendicular
         if direction == Fence.DIRECTION.HORIZONTAL:
-            # Un muro horizontal en coord bloquea entre coord y coord.top()
-            # Se cruza con un muro vertical en coord.top().right()
             crossingFenceCoord = coord.top().right()
             for fence in self.fences:
                 if fence.coord == crossingFenceCoord and fence.direction == Fence.DIRECTION.VERTICAL:
                     return False
-        else:  # VERTICAL
-            # Un muro vertical en coord bloquea entre coord y coord.left()
-            # Se cruza con un muro horizontal en coord.bottom().left()
+        else:
             crossingFenceCoord = coord.bottom().left()
             for fence in self.fences:
                 if fence.coord == crossingFenceCoord and fence.direction == Fence.DIRECTION.HORIZONTAL:
                     return False
         
-        # Validación 3: CRÍTICA - Verificar que no bloquee completamente a ningún jugador
-        # Simular colocación del muro temporalmente
         checkedFence = Fence(self, None)
         checkedFence.coord = coord
         checkedFence.direction = direction
         self.fences.append(checkedFence)
         
-        # IMPORTANTE: Actualizar movimientos válidos para reflejar el nuevo muro
-        # (esto es crítico para que BFS encuentre caminos correctamente)
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
         
-        # Verificar que CADA jugador aún tenga al menos un camino válido
         all_players_have_path = True
         for player in self.game.players:
-            # Buscar camino ignorando otros peones (solo considerando muros)
             path = Path.BreadthFirstSearch(
                 self, 
                 player.pawn.coord, 
@@ -341,13 +472,11 @@ class Board(IDrawable):
             )
             
             if path is None:
-                # Este jugador quedaría bloqueado - muro NO válido
                 all_players_have_path = False
                 if DEBUG:
                     print(f"⚠️  Muro {direction.name} en {coord} bloquearía completamente a {player.name}")
                 break
         
-        # Remover muro temporal y restaurar estado
         self.fences.pop()
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
         
@@ -357,7 +486,7 @@ class Board(IDrawable):
         if not INTERFACE:
             return
         if validPlacings is None:
-            validPlacings = self.storedValidFencePlacings#self.validFencePlacings()
+            validPlacings = self.storedValidFencePlacings
         for validPlacing in validPlacings:
             possibleFence = Fence(self, player)
             possibleFence.coord, possibleFence.direction = validPlacing.coord, validPlacing.direction
@@ -368,7 +497,7 @@ class Board(IDrawable):
         if not INTERFACE:
             return
         if validPlacings is None:
-            validPlacings = self.storedValidFencePlacings#self.validFencePlacings()
+            validPlacings = self.storedValidFencePlacings
         for validPlacing in validPlacings:
             possibleFence = Fence(self, player)
             possibleFence.coord, possibleFence.direction = validPlacing.coord, validPlacing.direction
@@ -376,11 +505,24 @@ class Board(IDrawable):
             del possibleFence
 
     def getSquareFromMousePosition(self, x, y):
+        # Ajustar por el offset del tablero
+        x -= self.board_offset_x
+        y -= self.board_offset_y
+        
+        if x < 0 or y < 0:
+            return None
+        
         fullSize = self.squareSize + self.innerSize
-        # on inner space
         if x % fullSize > self.squareSize or y % fullSize > self.squareSize:
             return None
-        return self.grid[int(x/fullSize)][int(y/fullSize)]
+        
+        col = int(x / fullSize)
+        row = int(y / fullSize)
+        
+        if col >= self.cols or row >= self.rows:
+            return None
+            
+        return self.grid[col][row]
 
     def getPawnMoveFromMousePosition(self, pawn, x, y) -> PawnMove:
         square = self.getSquareFromMousePosition(x, y)
@@ -389,26 +531,34 @@ class Board(IDrawable):
         return PawnMove(pawn, square.coord)
 
     def getFencePlacingFromMousePosition(self, x, y) -> FencePlacing:
-        fullSize = self.squareSize + self.innerSize
-        # on square space
-        if self.getSquareFromMousePosition(x, y) is not None:
+        # Ajustar por el offset del tablero
+        x -= self.board_offset_x
+        y -= self.board_offset_y
+        
+        if x < 0 or y < 0:
             return None
-        # vertical fence
+        
+        fullSize = self.squareSize + self.innerSize
+        if self.getSquareFromMousePosition(x + self.board_offset_x, y + self.board_offset_y) is not None:
+            return None
+        
         if x % fullSize > self.squareSize and y % fullSize < self.squareSize:
-            square = self.getSquareFromMousePosition(x + self.squareSize, y)
-            return FencePlacing(square.coord, Fence.DIRECTION.VERTICAL) if self.isValidFencePlacing(square.coord, Fence.DIRECTION.VERTICAL) else None
-        # horizontal fence
+            square = self.getSquareFromMousePosition(x + self.squareSize + self.board_offset_x, y + self.board_offset_y)
+            if square:
+                return FencePlacing(square.coord, Fence.DIRECTION.VERTICAL) if self.isValidFencePlacing(square.coord, Fence.DIRECTION.VERTICAL) else None
+        
         if x % fullSize < self.squareSize and y % fullSize > self.squareSize:
-            square = self.getSquareFromMousePosition(x, y + self.squareSize)
-            return FencePlacing(square.coord, Fence.DIRECTION.HORIZONTAL) if self.isValidFencePlacing(square.coord, Fence.DIRECTION.HORIZONTAL) else None
-        # on inner crossing space
+            square = self.getSquareFromMousePosition(x + self.board_offset_x, y + self.squareSize + self.board_offset_y)
+            if square:
+                return FencePlacing(square.coord, Fence.DIRECTION.HORIZONTAL) if self.isValidFencePlacing(square.coord, Fence.DIRECTION.HORIZONTAL) else None
+        
         if x % fullSize > self.squareSize and y % fullSize > self.squareSize:
-            square = self.getSquareFromMousePosition(x + self.squareSize, y + self.squareSize)
-            direction = Fence.DIRECTION.HORIZONTAL if square.left - x < square.top - y else Fence.DIRECTION.VERTICAL
-            return FencePlacing(square.coord, direction) if self.isValidFencePlacing(square.coord, direction) else None
+            square = self.getSquareFromMousePosition(x + self.squareSize + self.board_offset_x, y + self.squareSize + self.board_offset_y)
+            if square:
+                direction = Fence.DIRECTION.HORIZONTAL if (square.left + self.board_offset_x) - (x + self.board_offset_x) < (square.top + self.board_offset_y) - (y + self.board_offset_y) else Fence.DIRECTION.VERTICAL
+                return FencePlacing(square.coord, direction) if self.isValidFencePlacing(square.coord, direction) else None
         return None
 
-    # Move to Path.draw (idem for displayPawnMove and displayFencePlacing)
     def displayPath(self, path, color = None):
         if not INTERFACE:
             return
@@ -439,13 +589,10 @@ class Board(IDrawable):
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         isBlocking = False
         for player in self.game.players:
-            #print("¿Puede el jugador %s alcanzar uno de sus objetivos con %s? " % (player.name, fencePlacing), end="")
             path = Path.BreadthFirstSearch(self, player.pawn.coord, player.endPositions, ignorePawns = True)
             if path is None:
-                #print("NO")
                 isBlocking = True
                 break
-            #print("SÍ, a través de %s" % path)
         self.fences.pop()
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         return isBlocking
@@ -460,7 +607,7 @@ class Board(IDrawable):
         if fencePlacing in self.storedValidFencePlacings: self.storedValidFencePlacings.remove(fencePlacing)
 
     def updateStoredValidPawnMovesAfterPawnMove(self, fromCoord, toCoord):
-        coords = [fromCoord] if fromCoord is not None else [] # fromCoord is None at start
+        coords = [fromCoord] if fromCoord is not None else []
         coords.append(toCoord)
         for col in range(self.cols):
             for row in range(self.rows):
@@ -505,9 +652,7 @@ class Board(IDrawable):
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
 
     def drawOnConsole(self):
-        # top edge
         print("." + "-+"*(self.cols - 1) + "-.")
-        # first row
         coord = GridCoordinates(0, 0)
         pawn = self.getPawnAt(coord)
         print("|%s" % (" " if pawn is None else pawn.player.name[:1]), end="")
@@ -557,133 +702,3 @@ class Board(IDrawable):
         self.fences.pop()
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         return impact
-    
-    def test_blocking_scenario():
-        """
-        Prueba el escenario del log donde M (rojo) en 4,3 y O (azul) en 4,5
-        con muros ya colocados, e intenta colocar H-fence at 7,3
-        """
-        from src.Game import Game
-        from src.player.Human import Human
-        from src.GridCoordinates import GridCoordinates
-        from src.interface.Fence import Fence
-        
-        # Crear juego de prueba
-        game = Game([Human("M"), Human("O")], cols=9, rows=9)
-        board = game.board
-        
-        # Simular estado del log
-        # M en 4,3 (fila 3, columna 4 en índices 0-based)
-        game.players[0].pawn.coord = GridCoordinates(3, 2)  # col, row (0-based)
-        
-        # O en 4,5 (fila 5, columna 4)
-        game.players[1].pawn.coord = GridCoordinates(3, 4)
-        
-        # Colocar muros del log (convertir a 0-based)
-        existing_walls = [
-            ("H", GridCoordinates(4, 2)),  # H-fence at 5,3
-            ("H", GridCoordinates(3, 5)),  # H-fence at 4,6
-            ("H", GridCoordinates(2, 2)),  # H-fence at 3,3
-            ("V", GridCoordinates(2, 2)),  # V-fence at 3,3
-            ("V", GridCoordinates(2, 4)),  # V-fence at 3,5
-            ("V", GridCoordinates(2, 6)),  # V-fence at 3,7
-        ]
-        
-        for direction_str, coord in existing_walls:
-            direction = Fence.DIRECTION.HORIZONTAL if direction_str == "H" else Fence.DIRECTION.VERTICAL
-            fence = Fence(board, game.players[0])
-            fence.coord = coord
-            fence.direction = direction
-            board.fences.append(fence)
-        
-        # Actualizar movimientos válidos
-        board.initStoredValidActions()
-        
-        # PRUEBA: Intentar colocar H-fence at 7,3 (coord 6,2 en 0-based)
-        test_coord = GridCoordinates(6, 2)
-        test_direction = Fence.DIRECTION.HORIZONTAL
-        
-        is_valid = board.isValidFencePlacing(test_coord, test_direction)
-        
-        print(f"\n{'='*60}")
-        print(f"PRUEBA: H-fence at 7,3 (coord {test_coord})")
-        print(f"¿Es válido? {is_valid}")
-        print(f"{'='*60}\n")
-        
-        if is_valid:
-            print("❌ ERROR: El muro debería ser INVÁLIDO (bloquea al jugador O)")
-        else:
-            print("CORRECTO: El muro es inválido como debería ser")
-        
-        # Verificar caminos de ambos jugadores
-        for i, player in enumerate(game.players):
-            path = Path.BreadthFirstSearch(
-                board,
-                player.pawn.coord,
-                player.endPositions,
-                ignorePawns=True
-            )
-            if path:
-                print(f"Jugador {player.name}: Tiene camino (longitud {len(path.moves)})")
-            else:
-                print(f"Jugador {player.name}: SIN CAMINO")
-        
-        return is_valid
-
-
-    # Función de debugging adicional
-    def visualize_blocking_check(board, coord, direction, player):
-        """
-        Visualiza por qué un muro bloquea o no a un jugador.
-        Útil para debugging.
-        """
-        print(f"\n{'='*70}")
-        print(f"ANÁLISIS DE BLOQUEO: {direction.name} fence at {coord}")
-        print(f"Jugador: {player.name} en {player.pawn.coord}")
-        print(f"Objetivos: {[str(g) for g in player.endPositions]}")
-        print(f"{'='*70}")
-        
-        # Estado ANTES del muro
-        path_before = Path.BreadthFirstSearch(
-            board,
-            player.pawn.coord,
-            player.endPositions,
-            ignorePawns=True
-        )
-        
-        if path_before:
-            print(f"ANTES del muro: Camino de longitud {len(path_before.moves)}")
-            print(f"  Ruta: {path_before}")
-        else:
-            print(f"ANTES del muro: Ya está bloqueado")
-        
-        # Simular muro
-        temp_fence = Fence(board, None)
-        temp_fence.coord = coord
-        temp_fence.direction = direction
-        board.fences.append(temp_fence)
-        board.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
-        
-        # Estado DESPUÉS del muro
-        path_after = Path.BreadthFirstSearch(
-            board,
-            player.pawn.coord,
-            player.endPositions,
-            ignorePawns=True
-        )
-        
-        if path_after:
-            print(f"DESPUÉS del muro: Camino de longitud {len(path_after.moves)}")
-            print(f"  Ruta: {path_after}")
-            print(f"  Impacto: +{len(path_after.moves) - len(path_before.moves)} movimientos")
-        else:
-            print(f"DESPUÉS del muro: BLOQUEADO COMPLETAMENTE")
-            print(f"  Este muro NO es válido según las reglas de Quoridor")
-        
-        # Limpiar
-        board.fences.pop()
-        board.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
-        
-        print(f"{'='*70}\n")
-        
-        return path_after is not None

@@ -35,6 +35,7 @@ class Game:
         if innerSize is None:
             innerSize = int(squareSize/8)
         self.totalFenceCount = totalFenceCount
+        self.current_player_index = 0  # Para tracking del jugador actual
         board = Board(self, cols, rows, squareSize, innerSize)
         playerCount = min(int(len(players)/2)*2, 4)
         self.players = []
@@ -68,11 +69,19 @@ class Game:
                 player.pawn.place(player.startPosition)
                 for j in range(playerFenceCount):
                     player.fences.append(Fence(self.board, player))
-            currentPlayerIndex = random.randrange(playerCount)
+            
+            self.current_player_index = random.randrange(playerCount)
             finished = False
+            
             while not finished:
-                player = self.players[currentPlayerIndex]
+                player = self.players[self.current_player_index]
+                
+                # Redibujar el tablero para actualizar el indicador de turno
+                if INTERFACE:
+                    self.board.draw()
+                
                 action = player.play(self.board)
+                
                 if isinstance(action, PawnMove):
                     player.movePawn(action.toCoord)
                     if player.hasWon():
@@ -84,9 +93,12 @@ class Game:
                 elif isinstance(action, Quit):
                     finished = True
                     print("El jugador %s se rindió" % player.name)
-                currentPlayerIndex = (currentPlayerIndex + 1) % playerCount
+                
+                self.current_player_index = (self.current_player_index + 1) % playerCount
+                
                 if INTERFACE:
                     time.sleep(TEMPO_SEC)
+        
         print()
         print("PUNTUACIONES FINALES:")
         bestPlayer = self.players[0]
