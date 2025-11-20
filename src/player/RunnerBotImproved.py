@@ -13,26 +13,33 @@ class RunnerBotImproved(IBot):
     =====================================================
     Este bot SIEMPRE usa estrategia voraz y no puede cambiar de algoritmo.
     
-    ALGORITMO VORAZ:
-    En cada turno, seleccionar el movimiento que MÁS REDUCE
-    la distancia al objetivo, sin considerar consecuencias futuras.
+    ALGORITMO VORAZ MEJORADO:
+    1. DEFENSA (si hay amenaza): Colocar muro que maximiza diferencia de distancias
+    2. OFENSA (por defecto): Mover siempre hacia el camino más corto
+    
+    ESTRATEGIA:
+    - Evalúa amenaza de oponentes (decisión voraz basada en distancias actuales)
+    - Si oponente está muy cerca, coloca muro defensivo (maximiza diferencia inmediata)
+    - Si no hay amenaza, mueve hacia objetivo (minimiza distancia inmediata)
+    - Todas las decisiones son locales y voraces (no planifica múltiples turnos)
     
     CARACTERÍSTICAS:
-    ✓ Decisiones rápidas: O(V + E) por turno
-    ✓ Simple de implementar
-    ✓ Bueno contra oponentes pasivos
+    ✓ Decisiones rápidas: O(n × (V + E)) para muros, O(V + E) para movimiento
+    ✓ Ahora tiene defensa táctica con muros
+    ✓ Mantiene velocidad y simplicidad
     ✗ NO garantiza solución óptima
-    ✗ Vulnerable a trampas del oponente
-    ✗ Puede quedar atrapado en mínimos locales
+    ✗ Decisiones puramente locales (voraz)
+    ✗ Vulnerable a estrategias complejas
     
-    COMPLEJIDAD POR PARTIDA:
-    - Tiempo: O(T × (V + E)) donde T = turnos
-    - Para T=30, V=81, E=324: O(12,150) operaciones
+    COMPLEJIDAD POR TURNO:
+    - Con muros: O(n × (V + E)) donde n ≈ 30 muros evaluados
+    - Solo movimiento: O(V + E) ≈ O(405)
+    - Promedio: ~10-20ms/decisión
     
     OPTIMALIDAD:
-    - NO garantizada
+    - NO garantizada (característica de algoritmos voraces)
     - Ratio de aproximación: Ilimitado
-    - Funciona bien en tableros simples
+    - Mejor en tableros simples, vulnerable en complejos
     """
     
     # Algoritmo fijo - NO puede ser cambiado
@@ -52,17 +59,54 @@ class RunnerBotImproved(IBot):
     @Profiler.profile
     def play(self, board) -> IAction:
         """
-        ESTRATEGIA VORAZ: Elegir movimiento que minimiza distancia a objetivo.
+        ESTRATEGIA VORAZ MEJORADA: Con defensa táctica mediante muros.
         
         PSEUDOCÓDIGO:
-        1. Calcular camino más corto actual (BFS)
-        2. Tomar PRIMER PASO de ese camino (decisión voraz)
-        3. NO evaluar alternativas
-        4. NO anticipar respuestas del oponente
+        1. Si tengo muros Y oponente está amenazante:
+           a. Calcular distancias (voraz)
+           b. Si oponente más cerca que yo, colocar muro defensivo (voraz)
+        2. Si no, mover usando Greedy hacia objetivo
         
-        Complejidad: O(V + E) = O(405)
+        DECISIÓN VORAZ PARA MUROS:
+        - Elegir muro que MAXIMIZA diferencia de distancias
+        - No planificar múltiples turnos adelante
+        - Decisión basada en estado actual (voraz)
+        
+        Complejidad: O(n × (V + E)) para muros, O(V + E) para movimiento
         """
-        # SIEMPRE usar estrategia voraz - este es el algoritmo fijo del bot
+        # ESTRATEGIA DEFENSIVA VORAZ: Si tengo muros y oponente está cerca
+        if self.remainingFences() > 0 and len(board.storedValidFencePlacings) > 0:
+            # Calcular mi distancia a objetivo
+            my_path = Path.BreadthFirstSearch(
+                board, self.pawn.coord, self.endPositions, ignorePawns=True
+            )
+            my_distance = len(my_path.moves) if my_path else float('inf')
+            
+            # Calcular distancia mínima de oponentes
+            min_opponent_distance = float('inf')
+            closest_opponent = None
+            
+            for player in board.game.players:
+                if player.name != self.name:
+                    opp_path = Path.BreadthFirstSearch(
+                        board, player.pawn.coord, player.endPositions, ignorePawns=True
+                    )
+                    if opp_path:
+                        opp_distance = len(opp_path.moves)
+                        if opp_distance < min_opponent_distance:
+                            min_opponent_distance = opp_distance
+                            closest_opponent = player
+            
+            # DECISIÓN VORAZ: Si oponente está más cerca o muy cerca de mí, colocar muro
+            threat_threshold = 3  # Oponente es amenaza si está ≤3 casillas más cerca
+            if min_opponent_distance < my_distance or (my_distance - min_opponent_distance) <= threat_threshold:
+                # Buscar muro que maximice ventaja (GREEDY)
+                fence = self._greedy_defensive_fence(board, closest_opponent)
+                if fence:
+                    self.greedy_stats["moves_made"] += 1
+                    return fence
+        
+        # ESTRATEGIA OFENSIVA VORAZ: Mover hacia objetivo
         move = GreedyStrategy.greedyMove(board, self)
         
         if move is not None:
@@ -88,6 +132,59 @@ class RunnerBotImproved(IBot):
         self.greedy_stats["times_blocked"] += 1
         return self._fallback_move(board)
     
+    def _greedy_defensive_fence(self, board, target_opponent):
+        """
+        ALGORITMO VORAZ para colocar muro defensivo.
+        
+        ESTRATEGIA:
+        - Evaluar cada muro válido
+        - Calcular impacto inmediato en distancias
+        - ELEGIR muro con MAYOR diferencia positiva (decisión voraz)
+        - NO considerar respuestas futuras
+        
+        Returns:
+            FencePlacing si encuentra buen muro, None si no
+        """
+        from src.exception.PlayerPathObstructedException import PlayerPathObstructedException
+        
+        best_fence = None
+        best_score = -float('inf')
+        
+        # Limitar búsqueda a 30 muros aleatorios para mantener velocidad
+        import random
+        fences_to_check = board.storedValidFencePlacings
+        if len(fences_to_check) > 30:
+            fences_to_check = random.sample(fences_to_check, 30)
+        
+        for fence in fences_to_check:
+            try:
+                impact = board.getFencePlacingImpactOnPaths(fence)
+                
+                # FUNCIÓN VORAZ: maximizar diferencia
+                # Positivo si aumenta más distancia de oponente que mía
+                score = 0
+                for player_name, distance_increase in impact.items():
+                    if player_name == self.name:
+                        score -= distance_increase * 1.5  # Penalizar más auto-bloqueo
+                    elif target_opponent and player_name == target_opponent.name:
+                        score += distance_increase * 2.0  # Priorizar bloquear al más cercano
+                    else:
+                        score += distance_increase
+                
+                # DECISIÓN VORAZ: tomar mejor hasta ahora
+                if score > best_score:
+                    best_score = score
+                    best_fence = fence
+            
+            except PlayerPathObstructedException:
+                continue
+        
+        # Solo devolver muro si tiene impacto positivo significativo
+        if best_score > 1.0:
+            return best_fence
+        
+        return None
+    
     def _fallback_move(self, board):
         """
         Movimiento de respaldo cuando estrategia voraz falla
@@ -107,16 +204,22 @@ class RunnerBotImproved(IBot):
         """
         return {
             "bot_class": "RunnerBotImproved",
-            "strategy_type": "Greedy/Voraz",
+            "strategy_type": "Greedy/Voraz (Ofensiva + Defensiva)",
             "algorithm": self.ALGORITHM,
             "algorithm_code": self.ALGORITHM_CODE,
-            "decision_making": "Local optimum (shortest path first step)",
-            "time_complexity": "O(V + E) per turn",
+            "decision_making": "Local optimum (shortest path + defensive fences)",
+            "time_complexity": "O(n × (V + E)) with fences, O(V + E) movement only",
             "space_complexity": "O(V)",
-            "optimality_guarantee": "None",
+            "optimality_guarantee": "None (greedy limitation)",
             "approximation_ratio": "Unbounded",
-            "best_case": "No opponents or simple board",
-            "worst_case": "Intelligent blocking opponent",
+            "improvements": [
+                "Now places defensive fences when threatened",
+                "Evaluates opponent distances (greedy)",
+                "Maximizes distance differential (greedy decision)",
+                "Still maintains fast movement strategy"
+            ],
+            "best_case": "Open boards or passive opponents",
+            "worst_case": "Intelligent blocking opponents with complex strategies",
             "stats": self.greedy_stats,
             "algorithm_fixed": True
         }

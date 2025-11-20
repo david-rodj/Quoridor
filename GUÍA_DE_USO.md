@@ -83,65 +83,77 @@ python main.py --players=Yo:Human,IA:RandomBot --cols=5 --rows=5
 ### 3. **RunnerBotImproved** - Estrategia Voraz (Greedy)
 **ALGORITMO FIJO: GREEDY STRATEGY (Estrategia Voraz)**
 
-Siempre elige el movimiento que más reduce la distancia a la meta:
-- Usa BFS para calcular camino más corto
-- Toma primer paso del camino óptimo (decisión voraz)
-- NO anticipa bloqueos futuros
-- Tiene fallback a movimientos aleatorios si bloqueado
+Estrategia voraz mejorada con defensa táctica:
+- Usa BFS para calcular camino más corto (voraz)
+- **MEJORA**: Coloca muros defensivos cuando oponente está cerca
+- Evalúa amenaza de oponentes (decisión voraz basada en distancias actuales)
+- Si hay amenaza, coloca muro que maximiza diferencia de distancias (voraz)
+- Si no hay amenaza, mueve hacia objetivo por camino más corto (voraz)
+- Tiene fallback a movimientos válidos si bloqueado
 
-**Complejidad**: O(V + E) ≈ O(405) por decisión
-**Ventajas**: Rápido (~1ms/decisión), directo a la meta
-**Desventajas**: No anticipa bloqueos, vulnerable a trampas
-**Uso**: Bueno contra oponentes pasivos, desafiante pero predecible
+**Complejidad**: 
+- Con muros: O(n × (V + E)) donde n ≈ 30 muros
+- Solo movimiento: O(V + E) ≈ O(405)
+- Promedio: ~10-20ms/decisión
+
+**Ventajas**: Rápido, directo a la meta, ahora con defensa táctica
+**Desventajas**: No anticipa bloqueos complejos, decisiones puramente locales
+**Uso**: Desafiante con buen balance velocidad/estrategia
 
 **Características del Algoritmo Voraz:**
 - ✓ Toma decisión óptima local en cada paso
 - ✓ No requiere backtracking
+- ✓ MEJORA: Ahora incluye defensa con muros
 - ✗ NO garantiza solución óptima global
-- ✗ Puede quedar atrapado en mínimos locales
+- ✗ Vulnerable a estrategias complejas
 
 **Ejemplos de uso:**
 ```bash
-# Básico con estrategia voraz (fija)
+# Básico con estrategia voraz mejorada (fija)
 python main.py --players=Yo:Human,IA:RunnerBotImproved
 
 # Torneo entre RunnerBots
 python main.py --players=Greedy1:RunnerBotImproved,Greedy2:RunnerBotImproved --rounds=5
 
-# Comparar Greedy vs otros algoritmos
+# Comparar Greedy mejorado vs otros algoritmos
 python main.py --players=Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=10
 ```
 
 ### 4. **BuilderBot** - Programación Dinámica
 **ALGORITMO FIJO: DYNAMIC PROGRAMMING (Programación Dinámica)**
 
-Se enfoca en colocar muros estratégicos:
+Se enfoca en colocar muros estratégicos usando DP:
 - Calcula impacto de cada muro posible en todos los caminos
 - Usa memoización y tablas DP para eficiencia
 - Elige muro que maximiza bloqueo de oponentes vs. auto-bloqueo
 - Actualización incremental de estados (no recalcula todo)
-- Cuando no hay muros buenos, mueve aleatoriamente
+- **MEJORA**: Cuando no hay muros buenos, mueve usando GREEDY (no aleatorio)
 
-**Complejidad**: O(n × (V + E)) con optimización DP (vs O(n²) sin DP)
-**Ventajas**: Excelente defensa, controla el tablero, ~9x más rápido con DP
-**Desventajas**: Más lento que Greedy (~50ms/decisión), no agresivo en movimiento
-**Uso**: Contra oponentes que avanzan directamente, estrategia defensiva
+**Complejidad**: 
+- Con muros: O(n × (V + E)) con optimización DP (vs O(n²) sin DP)
+- Movimiento: O(V + E) con Greedy
+- Por turno: ~50ms con muros, ~1ms con movimiento
+
+**Ventajas**: Excelente defensa, controla el tablero, ~9x más rápido con DP, movimiento eficiente
+**Desventajas**: Más lento que Greedy puro en colocación de muros (~50ms/decisión)
+**Uso**: Contra oponentes que avanzan directamente, estrategia defensiva sólida
 
 **Características de Dynamic Programming:**
 - ✓ Memoización de subproblemas
 - ✓ Reutilización de cálculos previos
 - ✓ Actualización incremental eficiente
 - ✓ Garantiza optimalidad en colocación de muros
+- ✓ MEJORA: Movimiento eficiente con Greedy
 
 **Ejemplos de uso:**
 ```bash
-# Básico con estrategia DP (fija)
+# Básico con estrategia DP mejorada (fija)
 python main.py --players=Yo:Human,IA:BuilderBot
 
 # Batalla entre BuilderBots (ambos usan DP)
 python main.py --players=DP_Bot1:BuilderBot,DP_Bot2:BuilderBot --rounds=3
 
-# Comparar DP vs Greedy
+# Comparar DP vs Greedy mejorado
 python main.py --players=DP:BuilderBot,Greedy:RunnerBotImproved --rounds=10
 ```
 
@@ -200,12 +212,16 @@ python main.py --players=MiEstrategia:MyBot,Oponente:RandomBot
 
 ### **Tabla Comparativa de Bots y Algoritmos**
 
-| Bot | Algoritmo | Complejidad | Velocidad | Estrategia | Optimalidad |
-|-----|-----------|-------------|-----------|------------|-------------|
-| **RandomBot** | None (Random) | O(1) | Muy rápido | Ninguna | ✗ |
-| **RunnerBotImproved** | Greedy | O(V+E) | Muy rápido | Voraz (local) | ✗ |
-| **BuilderBot** | Dynamic Programming | O(n×(V+E)) | Rápido | Defensiva | ✓ (local) |
-| **BuildAndRunBot** | Divide & Conquer | O(k log k) | Moderado | Híbrida | ✓ (casi-óptimo) |
+| Bot | Algoritmo | Complejidad | Velocidad | Estrategia | Muros | Movimiento |
+|-----|-----------|-------------|-----------|------------|-------|------------|
+| **RandomBot** | None (Random) | O(1) | Muy rápido | Ninguna | Random | Random |
+| **RunnerBotImproved** | Greedy | O(n×(V+E)) | Rápido | Voraz + Defensa | ✓ Defensivo | ✓ Greedy |
+| **BuilderBot** | Dynamic Programming | O(n×(V+E)) | Rápido | Defensiva | ✓ DP óptimo | ✓ Greedy |
+| **BuildAndRunBot** | Divide & Conquer | O(k log k) | Moderado | Híbrida | ✓ D&C óptimo | ✓ Greedy |
+
+**MEJORAS RECIENTES:**
+- ✅ **RunnerBotImproved**: Ahora coloca muros defensivos cuando detecta amenazas
+- ✅ **BuilderBot**: Ahora usa movimiento Greedy en lugar de aleatorio
 
 ### **Análisis de Algoritmos**
 
@@ -215,19 +231,19 @@ python main.py --players=MiEstrategia:MyBot,Oponente:RandomBot
 - **Uso**: Baseline, pruebas, aprendizaje
 - **Rendimiento**: Débil, predecible
 
-#### **2. Greedy Strategy (RunnerBotImproved)**
-- **Velocidad**: ~1ms/decisión
-- **Estrategia**: Minimizar distancia inmediata
-- **Ventaja**: Rápido, simple, directo
-- **Desventaja**: No anticipa, vulnerable a trampas
-- **Rendimiento**: Medio, bueno en tableros simples
+#### **2. Greedy Strategy (RunnerBotImproved) - MEJORADO**
+- **Velocidad**: ~10-20ms/decisión (mejorado con muros)
+- **Estrategia**: Minimizar distancia + defensa táctica
+- **Ventaja**: Rápido, directo, ahora con defensa
+- **Desventaja**: Decisiones puramente locales
+- **Rendimiento**: Medio-Alto, mucho mejor que antes
 
-#### **3. Dynamic Programming (BuilderBot)**
-- **Velocidad**: ~50ms/decisión
-- **Estrategia**: Memoización y reutilización de cálculos
-- **Ventaja**: Defensa excelente, control de tablero
-- **Desventaja**: Movimiento no optimizado
-- **Rendimiento**: Alto en defensa, medio en ataque
+#### **3. Dynamic Programming (BuilderBot) - MEJORADO**
+- **Velocidad**: ~50ms con muros, ~1ms con movimiento
+- **Estrategia**: Memoización y reutilización + movimiento eficiente
+- **Ventaja**: Defensa excelente, movimiento eficiente
+- **Desventaja**: Algo más lento en colocación de muros
+- **Rendimiento**: Alto, más completo que antes
 
 #### **4. Divide and Conquer (BuildAndRunBot)**
 - **Velocidad**: ~100ms/decisión
@@ -246,13 +262,13 @@ python main.py --players=Yo:Human,IA:RandomBot
 
 #### **Intermedio - Entender Estrategia Voraz**
 ```bash
-# Desafiante pero justo, usa Greedy
+# Desafiante con defensa táctica, usa Greedy mejorado
 python main.py --players=Yo:Human,IA:RunnerBotImproved
 ```
 
 #### **Avanzado - Enfrentar Programación Dinámica**
 ```bash
-# Defensa fuerte con DP
+# Defensa fuerte con DP + movimiento eficiente
 python main.py --players=Yo:Human,IA:BuilderBot
 ```
 

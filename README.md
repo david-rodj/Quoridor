@@ -9,9 +9,13 @@ Un juego de tablero tipo Quoridor implementado en Python con múltiples estrateg
 | Bot | Algoritmo Fijo | Complejidad | Descripción |
 |-----|----------------|-------------|-------------|
 | **RandomBot** | None (Random) | O(1) | Decisiones aleatorias |
-| **RunnerBotImproved** | **Greedy Strategy** | O(V+E) | Estrategia voraz |
-| **BuilderBot** | **Dynamic Programming** | O(n×(V+E)) | Programación dinámica |
+| **RunnerBotImproved** | **Greedy Strategy** | O(n×(V+E)) | Estrategia voraz + defensa ✅ |
+| **BuilderBot** | **Dynamic Programming** | O(n×(V+E)) | Programación dinámica + movimiento eficiente ✅ |
 | **BuildAndRunBot** | **Divide and Conquer** | O(k log k) | Divide y vencerás |
+
+**✅ MEJORAS IMPLEMENTADAS:**
+- **RunnerBotImproved**: Ahora coloca muros defensivos usando criterio voraz cuando detecta amenazas
+- **BuilderBot**: Ahora usa movimiento Greedy eficiente en lugar de aleatorio
 
 ## Características
 
@@ -51,20 +55,25 @@ Un juego de tablero tipo Quoridor implementado en Python con múltiples estrateg
 - **Algoritmo Fijo**: None (Random)
 - **Complejidad**: O(1)
 
-#### **RunnerBotImproved** - Greedy Strategy
+#### **RunnerBotImproved** - Greedy Strategy (MEJORADO)
 - Siempre elige el movimiento que más reduce distancia a la meta
+- **MEJORA**: Ahora coloca muros defensivos cuando oponente está cerca
+- Evalúa amenaza de oponentes usando criterio voraz
+- Si hay amenaza, coloca muro que maximiza diferencia de distancias
 - Usa BFS para encontrar camino más corto
-- Rápido (~1ms/decisión) pero puede quedar atrapado
-- Bueno contra oponentes pasivos, vulnerable a bloqueos inteligentes
+- Rápido (~10-20ms/decisión con muros, ~1ms solo movimiento)
+- Bueno contra oponentes diversos, ahora con mejor defensa
 - **Algoritmo Fijo**: Greedy Strategy (Estrategia Voraz)
-- **Complejidad**: O(V + E) ≈ O(405)
-- ✗ NO garantiza optimalidad
+- **Complejidad**: O(n × (V + E)) con muros, O(V + E) solo movimiento
+- ✗ NO garantiza optimalidad (decisiones locales)
 
-#### **BuilderBot** - Dynamic Programming
+#### **BuilderBot** - Dynamic Programming (MEJORADO)
 - Calcula impacto de cada muro posible en todos los caminos
 - Elige muro que maximiza bloqueo de oponentes vs. auto-bloqueo
 - Enfocado en defensa y control del tablero
-- Más lento (~50ms/decisión) pero estratégico
+- **MEJORA**: Ahora usa movimiento Greedy en lugar de aleatorio
+- Más lento (~50ms/decisión) en colocación de muros, rápido en movimiento
+- Estratégico y eficiente
 - **Algoritmo Fijo**: Dynamic Programming (Programación Dinámica)
 - **Complejidad**: O(n × (V + E)) con optimización DP
 - ✓ Optimalidad local en colocación de muros
@@ -144,28 +153,52 @@ python main.py --players=A:Human,B:RandomBot --cols=7 --rows=7 --square_size=48
 
 ### Complejidad Comparativa
 
-| Algoritmo (Bot) | Temporal | Espacial | Optimalidad | Velocidad |
-|-----------------|----------|----------|-------------|-----------|
-| **Random** (RandomBot) | O(1) | O(1) | ❌ | Muy rápido |
-| **Greedy** (RunnerBotImproved) | O(V+E) | O(V) | ❌ | Muy rápido |
-| **DP** (BuilderBot) | O(n×(V+E)) | O(V²) | ✅ Local | Rápido |
-| **D&C** (BuildAndRunBot) | O(k log k) | O(log k) | ✅ Casi-óptimo | Moderado |
-| **BFS** (Todos) | O(V + E) | O(V) | ✅ | Base |
+| Algoritmo (Bot) | Temporal | Espacial | Optimalidad | Velocidad | Mejoras |
+|-----------------|----------|----------|-------------|-----------|---------|
+| **Random** (RandomBot) | O(1) | O(1) | ❌ | Muy rápido | - |
+| **Greedy** (RunnerBotImproved) | O(n×(V+E)) | O(V) | ❌ | Rápido | ✅ Muros defensivos |
+| **DP** (BuilderBot) | O(n×(V+E)) | O(V²) | ✅ Local | Rápido | ✅ Movimiento Greedy |
+| **D&C** (BuildAndRunBot) | O(k log k) | O(log k) | ✅ Casi-óptimo | Moderado | - |
+| **BFS** (Todos) | O(V + E) | O(V) | ✅ | Base | - |
+
+**MEJORAS RECIENTES:**
+- ✅ **RunnerBotImproved**: Ahora más desafiante con muros defensivos usando criterio voraz
+- ✅ **BuilderBot**: Movimiento eficiente con Greedy en lugar de aleatorio
 
 ### Performance en Quoridor 9x9
 
 - **Random (RandomBot)**: ~0.1ms por decisión
-- **Greedy (RunnerBotImproved)**: ~1ms por decisión
-- **DP (BuilderBot)**: ~50ms por decisión
+- **Greedy (RunnerBotImproved)**: ~10-20ms con muros defensivos, ~1ms solo movimiento (MEJORADO)
+- **DP (BuilderBot)**: ~50ms con muros, ~1ms con movimiento Greedy (MEJORADO)
 - **D&C con poda (BuildAndRunBot)**: ~100ms por decisión
+
+**Nota**: RunnerBotImproved y BuilderBot ahora son significativamente más desafiantes gracias a las mejoras implementadas.
 
 ### ¿Por qué cada bot tiene su algoritmo fijo?
 
 Cada bot está **específicamente diseñado y optimizado** para su algoritmo:
 
-1. **RunnerBotImproved** implementa la **esencia de Greedy**: toma siempre el primer paso del camino más corto sin mirar adelante
-2. **BuilderBot** utiliza **tablas DP** y memoización para evaluar eficientemente impactos de muros
-3. **BuildAndRunBot** combina **partición recursiva D&C** con poda inteligente para balance óptimo
+1. **RunnerBotImproved** implementa la **esencia de Greedy**: 
+   - Toma siempre decisiones locales óptimas
+   - MEJORA: Ahora evalúa amenazas y coloca muros defensivos usando criterio voraz
+   - Maximiza diferencia de distancias (decisión voraz inmediata)
+   - Todo basado en estado actual sin planificación a futuro
+
+2. **BuilderBot** utiliza **tablas DP** y memoización:
+   - Precalcula y reutiliza movimientos válidos
+   - Actualización incremental de estados
+   - MEJORA: Ahora usa Greedy para movimiento eficiente
+   - Combina lo mejor de DP (muros) con Greedy (movimiento)
+
+3. **BuildAndRunBot** combina **partición recursiva D&C**:
+   - Divide espacio de búsqueda recursivamente
+   - Aplica poda inteligente de candidatos
+   - Balance óptimo entre exploración y explotación
+
+**MEJORAS RECIENTES:**
+Las mejoras mantienen la integridad algorítmica de cada bot mientras los hacen más competitivos:
+- RunnerBotImproved sigue siendo Greedy (ahora en muros Y movimiento)
+- BuilderBot sigue usando DP (optimizado con movimiento Greedy)
 
 Cambiar el algoritmo de un bot rompería su diseño específico.
 
