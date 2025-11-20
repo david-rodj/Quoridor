@@ -34,6 +34,7 @@ class RunnerBotImproved(IBot):
     
     def __init__(self, name=None, color=None):
         super().__init__(name, color)
+        self.algorithm = 'Greedy'  # Default algorithm for shortest path strategy
         self.move_count = 0
         self.greedy_stats = {
             "total_distance_reduced": 0,

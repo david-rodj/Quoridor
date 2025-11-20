@@ -10,6 +10,9 @@ from src.algorithm.DivideAndConquer import DivideAndConquer
 
 
 class BuildAndRunBot(BuilderBot, RunnerBotImproved):
+    def __init__(self, name=None, color=None):
+        super().__init__(name, color)
+        self.algorithm = 'DivideAndConquer'  # Default algorithm for balanced strategy
     def play(self, board) -> IAction:
         # If no fence left, fallback to move strategy
         if self.remainingFences() < 1 or len(board.storedValidFencePlacings) < 1:

@@ -11,6 +11,9 @@ from src.algorithm.GreedyStrategy import GreedyStrategy
 
 
 class BuilderBot(RandomBot):
+    def __init__(self, name=None, color=None):
+        super().__init__(name, color)
+        self.algorithm = 'DynamicProgramming'  # Default algorithm for strategic fence placement
     def computeFencePlacingImpacts(self, board):
         fencePlacingImpacts = {}
         # Compute impact of every valid fence placing

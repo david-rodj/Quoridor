@@ -63,7 +63,7 @@ python main.py --players=Yo:Human,Contrincante:RandomBot
 python main.py --players=Bot1:RandomBot,Bot2:RandomBot,Bot3:RandomBot,Bot4:RandomBot --rounds=10
 
 # Tablero pequeño para pruebas rápidas
-python main.py --players=Yo:Human,IA:RandomBot --cols=5 --rows=5 --fences=5
+python main.py --players=Yo:Human,IA:RandomBot --cols=5 --rows=5 
 ```
 
 ### 3. **RunnerBotImproved** - Estrategia Voraz (Greedy)
@@ -103,7 +103,7 @@ Se enfoca en colocar muros estratégicos:
 **Ventajas**: Excelente defensa, controla el tablero
 **Desventajas**: Más lento (~50ms/decisión), no agresivo en movimiento
 **Uso**: Contra oponentes que avanzan directamente, estrategia defensiva
-**Algoritmos**: DivideAndConquer (recomendado), DynamicProgramming, Greedy
+**Algoritmos**: DynamicProgramming (por defecto), DivideAndConquer, Greedy
 
 **Ejemplos de uso:**
 ```bash
@@ -130,7 +130,7 @@ Mejor bot disponible, combina ofensa y defensa:
 **Ventajas**: Completo, desafiante (~100ms/decisión), adaptable
 **Desventajas**: Más lento que bots especializados
 **Uso**: Partidas competitivas, desafíos, mejor experiencia de juego
-**Algoritmos**: DivideAndConquer (recomendado), DynamicProgramming, Greedy
+**Algoritmos**: DivideAndConquer (por defecto), DynamicProgramming, Greedy
 
 **Ejemplos de uso:**
 ```bash
