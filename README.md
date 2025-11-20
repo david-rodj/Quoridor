@@ -88,11 +88,6 @@ Un juego de tablero tipo Quoridor implementado en Python con múltiples estrateg
 - **Complejidad**: O(k log k) donde k ≈ 20 candidatos
 - ✓ Casi-óptimo con alta eficiencia
 
-#### **MyBot** - Plantilla Personalizada
-- Clase base vacía para implementar estrategias personalizadas
-- Hereda de IBot, permite lógica completamente custom
-- **Algoritmo**: Depende de implementación (por defecto ninguno)
-
 ## Instalación
 
 ### Requisitos
