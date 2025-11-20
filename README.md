@@ -77,7 +77,7 @@ Un juego de tablero tipo Quoridor implementado en Python con múltiples estrateg
 pip install pygame
 ```
 
-## 💻 Uso
+## Uso
 
 ### Comando básico
 
@@ -94,7 +94,7 @@ python main.py --players=Nombre1:TipoBot1,Nombre2:TipoBot2 [opciones]
 | `-r`, `--rounds=` | Número de rondas | `--rounds=3` |
 | `-x`, `--cols=` | Columnas del tablero | `--cols=9` |
 | `-y`, `--rows=` | Filas del tablero | `--rows=9` |
-| `-f`, `--fences=` | Total de muros por jugador | `--fences=20` |
+| `-f`, `--fences=` | Muros para cada jugador | `--fences=5` |
 | `-s`, `--square_size=` | Tamaño de cada cuadro (px) | `--square_size=32` |
 | `-a`, `--algorithm=` | Algoritmo a usar | `--algorithm=DivideAndConquer` |
 

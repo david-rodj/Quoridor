@@ -26,14 +26,14 @@ def printUsage():
           "  -r, --rounds=\t\tNúmero de rondas a jugar (por defecto 1)\n"+
           "  -x, --cols=\t\tNúmero de columnas del tablero (por defecto 9)\n"+
           "  -y, --rows=\t\tNúmero de filas del tablero (por defecto 9)\n"+
-          "  -f, --fences=\t\tTotal de muros disponibles (por defecto 20)\n"+
+          "  -f, --fences=\t\tNúmero de muros por jugador (por defecto 5)\n"+
           "  -s, --square_size=\tTamaño de cada casilla en píxeles (por defecto 32)\n"+
           "  -a, --algorithm=\tAlgoritmo global para bots. Opciones: Greedy | DivideAndConquer | DynamicProgramming\n\n"+
-          "Ejemplo:\n  python main.py --players=Me:Human,Benoit:BuilderBot --algorithm=DivideAndConquer --square_size=32")
+          "Ejemplo:\n  python main.py --players=Me:Human,Benoit:BuilderBot --algorithm=DivideAndConquer --fences=5 --square_size=32")
 
 def readArguments():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "p:r:w:x:y:s:ha:", ["players=", "rounds=", "cols=", "rows=", "fences=", "square_size=", "help", "algorithm="])
+        opts, args = getopt.getopt(sys.argv[1:], "p:r:w:x:y:s:fha:", ["players=", "rounds=", "cols=", "rows=", "fences=", "square_size=", "help", "algorithm="])
     except getopt.GetoptError as err:
         print(err)
         printUsage()
@@ -42,7 +42,7 @@ def readArguments():
     rounds = 1
     cols = 9
     rows = 9
-    totalFenceCount = 20
+    fencesPerPlayer = 5
     squareSize = 32
     selected_algorithm = None
     for opt, arg in opts:
@@ -67,7 +67,7 @@ def readArguments():
         elif opt in ("-y", "--rows"):
             rows = int(arg)
         elif opt in ("-f", "--fences"):
-            totalFenceCount = int(arg)
+            fencesPerPlayer = int(arg)
         elif opt in ("-s", "--square_size"):
             squareSize = int(arg)
         elif opt in ("-a", "--algorithm"):
@@ -75,12 +75,12 @@ def readArguments():
         else:
             print("Opción no manejada. Abortando.")
             sys.exit(PARAMETERS_ERROR_RETURN_CODE)
-    return players, rounds, cols, rows, totalFenceCount, squareSize, selected_algorithm
+    return players, rounds, cols, rows, fencesPerPlayer, squareSize, selected_algorithm
 
 def main():
-    players, rounds, cols, rows, totalFenceCount, squareSize, selected_algorithm = readArguments()
+    players, rounds, cols, rows, fencesPerPlayer, squareSize, selected_algorithm = readArguments()
 
-    game = Game(players, cols, rows, totalFenceCount, squareSize)
+    game = Game(players, cols, rows, fencesPerPlayer, squareSize)
     # If the user specified a global algorithm, set it on all players that support it
     if selected_algorithm is not None:
         for p in players:

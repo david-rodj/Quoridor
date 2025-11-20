@@ -58,24 +58,28 @@ class Game:
         """
         roundNumberZeroFill = len(str(roundCount))
         for roundNumber in range(1, roundCount + 1):
+            self.board.current_round = roundNumber
             self.board.initStoredValidActions()
-            self.board.draw()
             print("Ronda #%s: " % str(roundNumber).zfill(roundNumberZeroFill), end="")
             playerCount = len(self.players)
-            playerFenceCount = int(self.totalFenceCount/playerCount)
+            playerFenceCount = self.totalFenceCount
             self.board.fences, self.board.pawns = [], []
             for i in range(playerCount):
                 player = self.players[i]
                 player.pawn.place(player.startPosition)
                 for j in range(playerFenceCount):
                     player.fences.append(Fence(self.board, player))
+            self.board.draw()
             
             self.current_player_index = random.randrange(playerCount)
             finished = False
-            
+            turn_number = 0
+
             while not finished:
+                turn_number += 1
+                self.board.current_turn = turn_number
                 player = self.players[self.current_player_index]
-                
+
                 # Redibujar el tablero para actualizar el indicador de turno
                 if INTERFACE:
                     self.board.draw()

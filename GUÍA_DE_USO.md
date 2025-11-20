@@ -215,9 +215,9 @@ Esto juega 5 rondas y muestra el ganador final.
 python main.py --players=Yo:Human,IA:BuilderBot --cols=7 --rows=7 --square_size=48
 ```
 
-### Partida: Con más muros (30 en lugar de 20)
+### Partida: Con más muros (10 en lugar de 5)
 ```bash
-python main.py --players=Yo:Human,IA:BuildAndRunBot --fences=30
+python main.py --players=Yo:Human,IA:BuildAndRunBot --fences=10
 ```
 
 ## Comparativa de Estrategias
@@ -325,13 +325,13 @@ python main.py --players=Yo:Human,IA:RunnerBotImproved --algorithm=DynamicProgra
 
 ```bash
 # Tablero pequeño y rápido (5x5)
-python main.py --players=Yo:Human,IA:RandomBot --cols=5 --rows=5 --fences=10
+python main.py --players=Yo:Human,IA:RandomBot --cols=5 --rows=5 --fences=5
 
 # Tablero grande y desafiante (11x11)
-python main.py --players=Yo:Human,IA:BuildAndRunBot --cols=11 --rows=11 --fences=30
+python main.py --players=Yo:Human,IA:BuildAndRunBot --cols=11 --rows=11 --fences=10
 
 # Tablero grande en pantalla pequeña
-python main.py --players=Yo:Human,IA:BuilderBot --square_size=24 --fences=15
+python main.py --players=Yo:Human,IA:BuilderBot --square_size=24 --fences=5
 ```
 
 ## Controles del Juego

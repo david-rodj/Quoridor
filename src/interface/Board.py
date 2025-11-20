@@ -21,10 +21,10 @@ class Board(IDrawable):
         self.squareSize, self.innerSize = squareSize, innerSize
 
         # Márgenes para estadísticas y coordenadas
-        self.margin_top = 80  # Para estadísticas de jugadores
-        self.margin_left = 50  # Para coordenadas verticales
-        self.margin_right = 50  # Para balance
-        self.margin_bottom = 50  # Para coordenadas horizontales
+        self.margin_top = 140  # Para estadísticas de jugadores
+        self.margin_left = 80  # Para coordenadas verticales
+        self.margin_right = 80  # Para balance
+        self.margin_bottom = 140  # Para coordenadas horizontales
 
         # Tamaño del tablero
         board_width = squareSize*cols + innerSize*(cols - 1)
@@ -41,9 +41,11 @@ class Board(IDrawable):
         self.grid = [[Square(self, GridCoordinates(col, row)) for row in range(rows)] for col in range(cols)]
         
         if INTERFACE:
-            self.window = GraphWin("Quoridor - Tablero de Madera", self.width, self.height)
+            self.window = GraphWin("Quoridor", self.width, self.height)
         self.pawns  = []
         self.fences = []
+        self.current_round = 1
+        self.current_turn = 0
         self.firstCol  = 0
         self.middleCol = int((self.cols - 1)/2)
         self.lastCol   = self.cols - 1
@@ -153,31 +155,38 @@ class Board(IDrawable):
         
         # Dibujar estadísticas de jugadores
         self._draw_player_stats()
-        
+
+        # Dibujar peones
+        for pawn in self.pawns:
+            pawn.draw()
+
+        # Dibujar muros
+        for fence in self.fences:
+            fence.draw()
+
         pygame.display.flip()
 
     def _draw_coordinates(self):
-        """Dibuja las coordenadas estilo ajedrez (A-I, 1-9)"""
         if not INTERFACE:
             return
         
         import pygame
         surface = self.window.surface
         
-        # Letras horizontales (A, B, C, ...)
+        # Números horizontales (1, 2, 3, ...)
         for col in range(self.cols):
-            letter = chr(65 + col)  # A=65 en ASCII
+            number = str(col + 1)
             x = self.board_offset_x + col * (self.squareSize + self.innerSize) + self.squareSize // 2
             
             # Arriba del tablero
             y_top = self.board_offset_y - 25
-            text_surface = self.coord_font.render(letter, True, pygame.Color(self.square_light))
+            text_surface = self.coord_font.render(number, True, pygame.Color(self.square_light))
             text_rect = text_surface.get_rect(center=(x, y_top))
             surface.blit(text_surface, text_rect)
-            
+
             # Abajo del tablero
             y_bottom = self.board_offset_y + self.squareSize*self.rows + self.innerSize*(self.rows - 1) + 25
-            text_surface = self.coord_font.render(letter, True, pygame.Color(self.square_light))
+            text_surface = self.coord_font.render(number, True, pygame.Color(self.square_light))
             text_rect = text_surface.get_rect(center=(x, y_bottom))
             surface.blit(text_surface, text_rect)
         
@@ -202,50 +211,113 @@ class Board(IDrawable):
         """Dibuja las estadísticas de cada jugador (turno y muros restantes)"""
         if not INTERFACE:
             return
-        
+
         import pygame
         surface = self.window.surface
-        
-        num_players = len(self.game.players)
-        section_width = self.width // num_players
-        
-        for i, player in enumerate(self.game.players):
-            x_center = section_width * i + section_width // 2
-            y_base = 30
-            
-            # Cuadro de fondo para cada jugador
-            box_rect = pygame.Rect(
-                section_width * i + 10,
-                10,
-                section_width - 20,
-                60
-            )
-            # Color de fondo según el jugador
-            bg_color = self._hex_to_rgb(player.color.value)
-            bg_color_light = tuple(min(255, c + 80) for c in bg_color)
-            pygame.draw.rect(surface, bg_color_light, box_rect, border_radius=8)
-            pygame.draw.rect(surface, bg_color, box_rect, 3, border_radius=8)
-            
-            # Nombre del jugador
-            name_text = self.stat_font.render(player.name, True, pygame.Color(self.text_color))
-            name_rect = name_text.get_rect(center=(x_center, y_base - 5))
-            surface.blit(name_text, name_rect)
-            
-            # Icono y cantidad de muros
+
+        players = self.game.players
+        num_players = len(players)
+
+        # Dividir jugadores en filas superior e inferior
+        if num_players <= 2:
+            top_players = players
+            bottom_players = []
+        else:
+            mid = (num_players + 1) // 2
+            top_players = players[:mid]
+            bottom_players = players[mid:]
+
+        # Dibujar fila superior
+        self._draw_player_row(top_players, 30, "top")
+
+        # Dibujar fila inferior si hay
+        if bottom_players:
+            # Posicionar abajo del tablero
+            y_base_bottom = self.height - 50
+            self._draw_player_row(bottom_players, y_base_bottom, "bottom")
+
+        # Dibujar contador de rondas y turnos centrado
+        round_text = f"Ronda: {self.current_round}   Turno: {self.current_turn}"
+        round_font = pygame.font.SysFont('Arial', 16, bold=True)
+        round_surface = round_font.render(round_text, True, pygame.Color(self.square_light))
+        round_rect = round_surface.get_rect(center=(self.width // 2, 30 + 50))
+        surface.blit(round_surface, round_rect)
+
+    def _draw_player_row(self, players, y_base, row_type):
+        """Dibuja una fila de jugadores"""
+        import pygame
+        surface = self.window.surface
+
+        num_in_row = len(players)
+        section_width = self.width // num_in_row
+
+        for i, player in enumerate(players):
+            x_start = section_width * i
+
+            # Posiciones
+            pawn_x = x_start + 40
+            pawn_y = y_base
+
+            # Indicador del turno: círculo amarillo si es el jugador actual
+            if hasattr(self.game, 'current_player_index') and self.game.players[self.game.current_player_index] == player:
+                pygame.draw.circle(surface, pygame.Color("#FFD700"), (pawn_x, pawn_y), 20, 3)
+
+            # Dibujar peón del jugador con el mismo estilo que en el tablero
+            pawn_radius = 15
+            color_rgb = self._hex_to_rgb(player.color.value)
+
+            # Sombra del peón
+            shadow_offset = 2
+            pygame.draw.circle(surface, (50, 50, 50), (pawn_x + shadow_offset, pawn_y + shadow_offset), pawn_radius)
+
+            # Círculo oscuro (borde)
+            dark_color = tuple(max(0, c - 40) for c in color_rgb)
+            pygame.draw.circle(surface, dark_color, (pawn_x, pawn_y), pawn_radius + 1)
+
+            # Círculo principal
+            pygame.draw.circle(surface, color_rgb, (pawn_x, pawn_y), pawn_radius)
+
+            # Brillo en la parte superior
+            highlight_radius = int(pawn_radius * 0.4)
+            highlight_offset_x = -int(pawn_radius * 0.2)
+            highlight_offset_y = -int(pawn_radius * 0.2)
+            highlight_color = tuple(min(255, c + 60) for c in color_rgb)
+            pygame.draw.circle(surface, highlight_color, (pawn_x + highlight_offset_x, pawn_y + highlight_offset_y), highlight_radius)
+
+            # Borde brillante
+            pygame.draw.circle(surface, (255, 255, 255), (pawn_x, pawn_y), pawn_radius, 2)
+
+            # Letra del jugador
+            font_small = pygame.font.SysFont('Arial', 17, bold=True)
+            text_surface = font_small.render(player.name[:1], True, pygame.Color("white"))
+            text_rect = text_surface.get_rect(center=(pawn_x, pawn_y))
+
+            # Sombra del texto
+            shadow_text = font_small.render(player.name[:1], True, (0, 0, 0))
+            shadow_rect = shadow_text.get_rect(center=(pawn_x + 1, pawn_y + 1))
+            surface.blit(shadow_text, shadow_rect)
+
+            # Texto principal
+            surface.blit(text_surface, text_rect)
+
+            # Texto de muros restantes
             fences_remaining = player.remainingFences()
-            fences_text = f"🧱 {fences_remaining}"
-            fences_surface = self.stat_font_small.render(fences_text, True, pygame.Color(self.text_color))
-            fences_rect = fences_surface.get_rect(center=(x_center, y_base + 15))
-            surface.blit(fences_surface, fences_rect)
-            
-            # Indicador del jugador actual
-            if hasattr(self.game, 'current_player_index'):
-                if self.game.players[self.game.current_player_index] == player:
-                    # Dibujar flecha o indicador
-                    indicator_text = "◀▶"
-                    indicator_surface = self.stat_font.render(indicator_text, True, pygame.Color("#FFD700"))
-                    indicator_rect = indicator_surface.get_rect(center=(x_center, y_base + 35))
-                    surface.blit(indicator_surface, indicator_rect)
+            font_size = 16
+            font = pygame.font.SysFont('Arial', font_size, bold=True)
+            color = pygame.Color(self.square_light)
+
+            first_line = "Muros restantes:"
+            second_line = str(fences_remaining)
+
+            first_surface = font.render(first_line, True, color)
+            second_surface = font.render(second_line, True, color)
+
+            fences_x = pawn_x + 40
+            first_rect = first_surface.get_rect(midleft=(fences_x, pawn_y - 10))
+            second_rect = second_surface.get_rect(midleft=(fences_x, pawn_y + 10))
+
+            surface.blit(first_surface, first_rect)
+            surface.blit(second_surface, second_rect)
 
     def _hex_to_rgb(self, hex_color):
         """Convierte color hex a tupla RGB"""
@@ -403,6 +475,8 @@ class Board(IDrawable):
             possiblePawn.coord = validMove.toCoord.clone()
             possiblePawn.draw(Color.Mix(player.color.value, Color.SQUARE.value))
             del possiblePawn
+        import pygame
+        pygame.display.flip()
 
     def hideValidPawnMoves(self, player, validMoves = None):
         if not INTERFACE:
@@ -410,10 +484,9 @@ class Board(IDrawable):
         if validMoves is None:
             validMoves = self.storedValidPawnMoves[player.pawn.coord]
         for validMove in validMoves:
-            possiblePawn = Pawn(self, player)
-            possiblePawn.coord = validMove.toCoord.clone()
-            possiblePawn.draw(Color.SQUARE.value, Color.SQUARE.value)
-            del possiblePawn
+            self.grid[validMove.toCoord.col][validMove.toCoord.row].draw()
+        import pygame
+        pygame.display.flip()
 
     def validFencePlacings(self):
         global TRACE
@@ -488,10 +561,13 @@ class Board(IDrawable):
         if validPlacings is None:
             validPlacings = self.storedValidFencePlacings
         for validPlacing in validPlacings:
-            possibleFence = Fence(self, player)
-            possibleFence.coord, possibleFence.direction = validPlacing.coord, validPlacing.direction
-            possibleFence.draw(Color.Lighter(player.color.value))
-            del possibleFence
+            if self.isValidFencePlacing(validPlacing.coord, validPlacing.direction):
+                possibleFence = Fence(self, player)
+                possibleFence.coord, possibleFence.direction = validPlacing.coord, validPlacing.direction
+                possibleFence.draw(Color.Lighter(player.color.value))
+                del possibleFence
+        import pygame
+        pygame.display.flip()
 
     def hideValidFencePlacings(self, player, validPlacings = None):
         if not INTERFACE:
@@ -499,10 +575,13 @@ class Board(IDrawable):
         if validPlacings is None:
             validPlacings = self.storedValidFencePlacings
         for validPlacing in validPlacings:
-            possibleFence = Fence(self, player)
-            possibleFence.coord, possibleFence.direction = validPlacing.coord, validPlacing.direction
-            possibleFence.draw(Color.WHITE.value)
-            del possibleFence
+            if self.isValidFencePlacing(validPlacing.coord, validPlacing.direction):
+                possibleFence = Fence(self, player)
+                possibleFence.coord, possibleFence.direction = validPlacing.coord, validPlacing.direction
+                possibleFence.draw(self.wood_light)
+                del possibleFence
+        import pygame
+        pygame.display.flip()
 
     def getSquareFromMousePosition(self, x, y):
         # Ajustar por el offset del tablero
