@@ -2,7 +2,6 @@ from src.action.IAction import *
 from src.action.FencePlacing import *
 
 
-
 class IPlayer:
     def __init__(self, name = None, color = None):
         self.name   = name
@@ -12,13 +11,6 @@ class IPlayer:
         self.score  = 0
         self.startPosition = None
         self.endPositions = []
-        # Preferred algorithm for this player (string):
-        # e.g. 'Greedy', 'DivideAndConquer', 'DynamicProgramming'
-        self.algorithm = None
-
-    def set_algorithm(self, algorithm_name: str):
-        """Set preferred algorithm for this player."""
-        self.algorithm = algorithm_name
 
     def play(self, board) -> IAction:
         pass

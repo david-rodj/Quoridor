@@ -3,12 +3,15 @@ from src.action.IAction import *
 from src.Path import *
 from src.algorithm.GreedyStrategy import GreedyStrategy
 from src.benchmark.Profiler import Profiler
-from src.algorithm.DynamicProgramming import DynamicProgramming
 
 
 class RunnerBotImproved(IBot):
     """
     Bot que implementa ESTRATEGIA VORAZ (Greedy) para Quoridor.
+    
+    ALGORITMO FIJO: GREEDY STRATEGY (Estrategia Voraz)
+    =====================================================
+    Este bot SIEMPRE usa estrategia voraz y no puede cambiar de algoritmo.
     
     ALGORITMO VORAZ:
     En cada turno, seleccionar el movimiento que MÁS REDUCE
@@ -27,14 +30,18 @@ class RunnerBotImproved(IBot):
     - Para T=30, V=81, E=324: O(12,150) operaciones
     
     OPTIMALIDAD:
-    - NO garantizada (ver docs/optimality_analysis.md)
+    - NO garantizada
     - Ratio de aproximación: Ilimitado
     - Funciona bien en tableros simples
     """
     
+    # Algoritmo fijo - NO puede ser cambiado
+    ALGORITHM = "Greedy Strategy"
+    ALGORITHM_CODE = "GREEDY"
+    
     def __init__(self, name=None, color=None):
         super().__init__(name, color)
-        self.algorithm = 'Greedy'  # Default algorithm for shortest path strategy
+        # Eliminar la posibilidad de cambiar el algoritmo
         self.move_count = 0
         self.greedy_stats = {
             "total_distance_reduced": 0,
@@ -55,30 +62,8 @@ class RunnerBotImproved(IBot):
         
         Complejidad: O(V + E) = O(405)
         """
-        # If a preferred algorithm is selected, try to use it
-        algo = getattr(self, 'algorithm', None)
-        if algo == 'DynamicProgramming':
-            # Use DP bellman-ford distances to choose neighbour that reduces distance
-            try:
-                dist = DynamicProgramming.bellmanFord(board, self.pawn.coord, self.endPositions)
-                # choose a valid move that reduces distance
-                candidates = board.storedValidPawnMoves[self.pawn.coord]
-                best = None
-                best_d = float('inf')
-                for mv in candidates:
-                    d = dist.get(mv.toCoord, float('inf'))
-                    if d < best_d:
-                        best_d = d
-                        best = mv
-                if best is not None:
-                    move = best
-                else:
-                    move = GreedyStrategy.greedyMove(board, self)
-            except Exception:
-                move = GreedyStrategy.greedyMove(board, self)
-        else:
-            # Usar estrategia voraz explícitamente
-            move = GreedyStrategy.greedyMove(board, self)
+        # SIEMPRE usar estrategia voraz - este es el algoritmo fijo del bot
+        move = GreedyStrategy.greedyMove(board, self)
         
         if move is not None:
             # Estadísticas
@@ -86,9 +71,16 @@ class RunnerBotImproved(IBot):
             self.greedy_stats["moves_made"] += 1
             
             # Calcular reducción de distancia (para análisis)
-            before = len(Path.BreadthFirstSearch(
-                board, self.pawn.coord, self.endPositions, ignorePawns=True
-            ).moves)
+            try:
+                path = Path.BreadthFirstSearch(
+                    board, self.pawn.coord, self.endPositions, ignorePawns=True
+                )
+                if path:
+                    before_distance = len(path.moves)
+                    # Estadística guardada para análisis
+                    self.greedy_stats["total_distance_reduced"] += 1
+            except:
+                pass
             
             return move
         
@@ -114,7 +106,10 @@ class RunnerBotImproved(IBot):
         Útil para análisis académico.
         """
         return {
+            "bot_class": "RunnerBotImproved",
             "strategy_type": "Greedy/Voraz",
+            "algorithm": self.ALGORITHM,
+            "algorithm_code": self.ALGORITHM_CODE,
             "decision_making": "Local optimum (shortest path first step)",
             "time_complexity": "O(V + E) per turn",
             "space_complexity": "O(V)",
@@ -122,7 +117,8 @@ class RunnerBotImproved(IBot):
             "approximation_ratio": "Unbounded",
             "best_case": "No opponents or simple board",
             "worst_case": "Intelligent blocking opponent",
-            "stats": self.greedy_stats
+            "stats": self.greedy_stats,
+            "algorithm_fixed": True
         }
     
     def explain_last_move(self, board):
@@ -137,6 +133,7 @@ class RunnerBotImproved(IBot):
         if path:
             return {
                 "decision": "Greedy - Take first step of shortest path",
+                "algorithm": self.ALGORITHM,
                 "path_length": len(path.moves),
                 "path": str(path),
                 "reasoning": "Minimizes immediate distance to goal",
@@ -146,6 +143,7 @@ class RunnerBotImproved(IBot):
         else:
             return {
                 "decision": "Blocked - No direct path available",
+                "algorithm": self.ALGORITHM,
                 "reasoning": "Fallback to any valid move"
             }
     
@@ -176,6 +174,7 @@ class RunnerBotWithAnalysis(RunnerBotImproved):
         if path and self.verbose:
             decision = {
                 "turn": self.move_count,
+                "algorithm": self.ALGORITHM,
                 "position": str(self.pawn.coord),
                 "goal_distance": len(path.moves),
                 "move_chosen": str(path.firstMove()),
@@ -185,6 +184,7 @@ class RunnerBotWithAnalysis(RunnerBotImproved):
             self.decision_log.append(decision)
 
             print(f"\n[DECISIÓN VORAZ - Turno {self.move_count}]")
+            print(f"  Algoritmo: {self.ALGORITHM}")
             print(f"  Posición: {self.pawn.coord}")
             print(f"  Distancia al objetivo: {len(path.moves)}")
             print(f"  Movimiento elegido: {path.firstMove()}")
@@ -198,7 +198,9 @@ class RunnerBotWithAnalysis(RunnerBotImproved):
         with open(filename, 'w') as f:
             json.dump({
                 "player": self.name,
+                "bot_class": "RunnerBotImproved",
                 "strategy": "Greedy/Voraz",
+                "algorithm": self.ALGORITHM,
                 "total_moves": self.move_count,
                 "decisions": self.decision_log,
                 "stats": self.greedy_stats

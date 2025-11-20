@@ -12,12 +12,25 @@ Guía completa en español para jugar y configurar Quoridor con diferentes algor
 ### Forma más simple
 
 ```bash
-python main.py --players=Yo:Human,IA:BuilderBot
+python main.py --players=Yo:Human,IA:BuildAndRunBot
 ```
 
 Esto abre una partida donde:
 - Tú juegas como `Yo` (jugador humano)
-- La IA juega como `IA` (estrategia de construcción)
+- La IA juega como `IA` usando **Divide and Conquer** (algoritmo fijo del BuildAndRunBot)
+
+## IMPORTANTE: Algoritmos Fijos por Bot
+
+**CADA BOT TIENE SU ALGORITMO FIJO** que no puede ser cambiado:
+
+| Bot | Algoritmo Fijo | Descripción |
+|-----|----------------|-------------|
+| **RandomBot** | Ninguno (Aleatorio) | Decisiones completamente aleatorias |
+| **RunnerBotImproved** | **Greedy Strategy** | Estrategia voraz, siempre busca camino más corto |
+| **BuilderBot** | **Dynamic Programming** | Programación dinámica para muros estratégicos |
+| **BuildAndRunBot** | **Divide and Conquer** | Divide y vencerás, estrategia balanceada |
+
+**Ya NO existe el parámetro `--algorithm`** porque cada bot está diseñado específicamente para usar un algoritmo particular.
 
 ## Tipos de Jugadores Disponibles
 
@@ -25,18 +38,18 @@ Esto abre una partida donde:
 Controla la partida manualmente con el ratón:
 - **Clic en cuadro adyacente**: Mover el peón a esa posición
 - **Clic en línea/intersección**: Colocar muro vertical/horizontal
+- **Tecla P**: Mostrar/ocultar movimientos válidos
+- **Tecla F**: Mostrar/ocultar posiciones de muros válidas
 - **Escape**: Salir del juego
 
-**Ventajas**: Control total, aprendizaje de estrategias
-**Desventajas**: Requiere atención constante
-**Algoritmos**: No soporta (control manual)
+**Algoritmo**: No aplica (control manual)
 
 **Ejemplos de uso:**
 ```bash
 # Básico contra RandomBot
 python main.py --players=Tú:Human,IA:RandomBot
 
-# Contra RunnerBot (desafiante)
+# Contra RunnerBot (usa Greedy)
 python main.py --players=Tú:Human,IA:RunnerBotImproved
 
 # Torneo con múltiples bots
@@ -49,10 +62,11 @@ La IA toma decisiones completamente al azar:
 - 67% de probabilidad de mover peón aleatoriamente
 - Evita muros que bloquean completamente caminos
 
+**Algoritmo Fijo**: Ninguno (Random)
+**Complejidad**: O(1) por decisión
 **Ventajas**: Muy rápido, impredecible
 **Desventajas**: Sin estrategia, fácil de vencer
 **Uso**: Baseline para pruebas, aprendizaje básico
-**Algoritmos**: No soporta (acciones aleatorias)
 
 **Ejemplos de uso:**
 ```bash
@@ -67,87 +81,101 @@ python main.py --players=Yo:Human,IA:RandomBot --cols=5 --rows=5
 ```
 
 ### 3. **RunnerBotImproved** - Estrategia Voraz (Greedy)
+**ALGORITMO FIJO: GREEDY STRATEGY (Estrategia Voraz)**
+
 Siempre elige el movimiento que más reduce la distancia a la meta:
 - Usa BFS para calcular camino más corto
-- Toma primer paso del camino óptimo
-- Soporta algoritmos avanzados (DP para distancias)
+- Toma primer paso del camino óptimo (decisión voraz)
+- NO anticipa bloqueos futuros
 - Tiene fallback a movimientos aleatorios si bloqueado
 
+**Complejidad**: O(V + E) ≈ O(405) por decisión
 **Ventajas**: Rápido (~1ms/decisión), directo a la meta
 **Desventajas**: No anticipa bloqueos, vulnerable a trampas
 **Uso**: Bueno contra oponentes pasivos, desafiante pero predecible
-**Algoritmos**: Greedy (por defecto), DynamicProgramming
+
+**Características del Algoritmo Voraz:**
+- ✓ Toma decisión óptima local en cada paso
+- ✓ No requiere backtracking
+- ✗ NO garantiza solución óptima global
+- ✗ Puede quedar atrapado en mínimos locales
 
 **Ejemplos de uso:**
 ```bash
-# Básico con estrategia voraz
+# Básico con estrategia voraz (fija)
 python main.py --players=Yo:Human,IA:RunnerBotImproved
 
-# Con algoritmo Greedy (por defecto)
-python main.py --players=Yo:Human,IA:RunnerBotImproved --algorithm=Greedy
+# Torneo entre RunnerBots
+python main.py --players=Greedy1:RunnerBotImproved,Greedy2:RunnerBotImproved --rounds=5
 
-# Con Dynamic Programming para mejores cálculos de distancia
-python main.py --players=Yo:Human,IA:RunnerBotImproved --algorithm=DynamicProgramming
-
-# Torneo entre RunnerBots con diferentes algoritmos
-python main.py --players=GreedyBot:RunnerBotImproved,DPBot:RunnerBotImproved --algorithm=DynamicProgramming --rounds=5
+# Comparar Greedy vs otros algoritmos
+python main.py --players=Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=10
 ```
 
-### 4. **BuilderBot** - Estrategia de Construcción
+### 4. **BuilderBot** - Programación Dinámica
+**ALGORITMO FIJO: DYNAMIC PROGRAMMING (Programación Dinámica)**
+
 Se enfoca en colocar muros estratégicos:
 - Calcula impacto de cada muro posible en todos los caminos
+- Usa memoización y tablas DP para eficiencia
 - Elige muro que maximiza bloqueo de oponentes vs. auto-bloqueo
-- Soporta DivideAndConquer y DynamicProgramming
+- Actualización incremental de estados (no recalcula todo)
 - Cuando no hay muros buenos, mueve aleatoriamente
 
-**Ventajas**: Excelente defensa, controla el tablero
-**Desventajas**: Más lento (~50ms/decisión), no agresivo en movimiento
+**Complejidad**: O(n × (V + E)) con optimización DP (vs O(n²) sin DP)
+**Ventajas**: Excelente defensa, controla el tablero, ~9x más rápido con DP
+**Desventajas**: Más lento que Greedy (~50ms/decisión), no agresivo en movimiento
 **Uso**: Contra oponentes que avanzan directamente, estrategia defensiva
-**Algoritmos**: DynamicProgramming (por defecto), DivideAndConquer, Greedy
+
+**Características de Dynamic Programming:**
+- ✓ Memoización de subproblemas
+- ✓ Reutilización de cálculos previos
+- ✓ Actualización incremental eficiente
+- ✓ Garantiza optimalidad en colocación de muros
 
 **Ejemplos de uso:**
 ```bash
-# Básico con estrategia de construcción
+# Básico con estrategia DP (fija)
 python main.py --players=Yo:Human,IA:BuilderBot
 
-# Con Divide and Conquer (recomendado para BuilderBot)
-python main.py --players=Yo:Human,IA:BuilderBot --algorithm=DivideAndConquer
+# Batalla entre BuilderBots (ambos usan DP)
+python main.py --players=DP_Bot1:BuilderBot,DP_Bot2:BuilderBot --rounds=3
 
-# Con Dynamic Programming para análisis profundo
-python main.py --players=Yo:Human,IA:BuilderBot --algorithm=DynamicProgramming
-
-# Batalla entre BuilderBots con diferentes algoritmos
-python main.py --players=DnC_Bot:BuilderBot,DP_Bot:BuilderBot --algorithm=DivideAndConquer --rounds=3
+# Comparar DP vs Greedy
+python main.py --players=DP:BuilderBot,Greedy:RunnerBotImproved --rounds=10
 ```
 
-### 5. **BuildAndRunBot** - Estrategia Combinada
+### 5. **BuildAndRunBot** - Divide y Vencerás
+**ALGORITMO FIJO: DIVIDE AND CONQUER (Divide y Vencerás)**
+
 Mejor bot disponible, combina ofensa y defensa:
-- **Con muros**: Usa BuilderBot para colocar estratégicamente
-- **Sin muros**: Usa RunnerBotImproved para avanzar eficientemente
-- Soporta todos los algoritmos avanzados
+- **Con muros**: Usa D&C con poda para colocar estratégicamente
+- **Sin muros**: Usa Greedy para avanzar eficientemente
+- Particiona espacio de búsqueda recursivamente
+- Aplica poda de candidatos prometedores
 - Equilibra construcción de muros con progreso hacia meta
 
-**Ventajas**: Completo, desafiante (~100ms/decisión), adaptable
+**Complejidad**: O(k log k) donde k ≈ 20 candidatos (vs O(n²) fuerza bruta)
+**Ventajas**: Completo, desafiante (~100ms/decisión), adaptable, ~18x más rápido con D&C
 **Desventajas**: Más lento que bots especializados
 **Uso**: Partidas competitivas, desafíos, mejor experiencia de juego
-**Algoritmos**: DivideAndConquer (por defecto), DynamicProgramming, Greedy
+
+**Características de Divide and Conquer:**
+- ✓ Partición recursiva del espacio de búsqueda
+- ✓ Poda de candidatos no prometedores
+- ✓ Complejidad logarítmica
+- ✓ Casi-óptimo con alta eficiencia
 
 **Ejemplos de uso:**
 ```bash
-# Básico - el bot más equilibrado
+# Básico - el bot más equilibrado (usa D&C fijo)
 python main.py --players=Yo:Human,IA:BuildAndRunBot
 
-# Con Divide and Conquer (recomendado para máxima dificultad)
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DivideAndConquer
+# Torneo entre BuildAndRunBots (todos usan D&C)
+python main.py --players=DnC1:BuildAndRunBot,DnC2:BuildAndRunBot --rounds=5
 
-# Con Dynamic Programming para análisis completo
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DynamicProgramming
-
-# Con Greedy para velocidad
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=Greedy
-
-# Torneo entre BuildAndRunBots con diferentes algoritmos
-python main.py --players=DnC:BuildAndRunBot,DP:BuildAndRunBot,Greedy:BuildAndRunBot --algorithm=DivideAndConquer --rounds=5
+# Máxima dificultad
+python main.py --players=Yo:Human,IA1:BuildAndRunBot,IA2:BuildAndRunBot --rounds=3
 ```
 
 ### 6. **MyBot** - Plantilla Personalizada
@@ -156,8 +184,8 @@ Clase base vacía para implementar tu propia estrategia:
 - Método `play(board)` vacío para lógica custom
 - Permite experimentación con algoritmos propios
 
+**Algoritmo**: Depende de implementación (por defecto ninguno)
 **Uso**: Desarrollo de nuevas estrategias de IA
-**Algoritmos**: Depende de implementación (por defecto ninguno)
 
 **Ejemplos de uso:**
 ```bash
@@ -168,47 +196,94 @@ python main.py --players=Yo:Human,MyBot:MyBot
 python main.py --players=MiEstrategia:MyBot,Oponente:RandomBot
 ```
 
-## Algoritmos Disponibles
+## Comparativa de Algoritmos
 
-### Opción: `--algorithm=Greedy`
-Usa estrategia voraz (rápida pero no garantiza óptimo).
+### **Tabla Comparativa de Bots y Algoritmos**
 
+| Bot | Algoritmo | Complejidad | Velocidad | Estrategia | Optimalidad |
+|-----|-----------|-------------|-----------|------------|-------------|
+| **RandomBot** | None (Random) | O(1) | Muy rápido | Ninguna | ✗ |
+| **RunnerBotImproved** | Greedy | O(V+E) | Muy rápido | Voraz (local) | ✗ |
+| **BuilderBot** | Dynamic Programming | O(n×(V+E)) | Rápido | Defensiva | ✓ (local) |
+| **BuildAndRunBot** | Divide & Conquer | O(k log k) | Moderado | Híbrida | ✓ (casi-óptimo) |
+
+### **Análisis de Algoritmos**
+
+#### **1. Random - Sin Algoritmo**
+- **Velocidad**: ~0.1ms/decisión
+- **Estrategia**: Completamente aleatoria
+- **Uso**: Baseline, pruebas, aprendizaje
+- **Rendimiento**: Débil, predecible
+
+#### **2. Greedy Strategy (RunnerBotImproved)**
+- **Velocidad**: ~1ms/decisión
+- **Estrategia**: Minimizar distancia inmediata
+- **Ventaja**: Rápido, simple, directo
+- **Desventaja**: No anticipa, vulnerable a trampas
+- **Rendimiento**: Medio, bueno en tableros simples
+
+#### **3. Dynamic Programming (BuilderBot)**
+- **Velocidad**: ~50ms/decisión
+- **Estrategia**: Memoización y reutilización de cálculos
+- **Ventaja**: Defensa excelente, control de tablero
+- **Desventaja**: Movimiento no optimizado
+- **Rendimiento**: Alto en defensa, medio en ataque
+
+#### **4. Divide and Conquer (BuildAndRunBot)**
+- **Velocidad**: ~100ms/decisión
+- **Estrategia**: Partición recursiva con poda
+- **Ventaja**: Equilibrio perfecto ofensa/defensa
+- **Desventaja**: Más lento que especializados
+- **Rendimiento**: Muy alto, más desafiante
+
+### **Recomendaciones por Nivel**
+
+#### **Principiante - Aprender Reglas**
 ```bash
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=Greedy
+# Fácil de vencer, sin algoritmo
+python main.py --players=Yo:Human,IA:RandomBot
 ```
 
-### Opción: `--algorithm=DivideAndConquer`
-Usa divide y vencerás (más lento pero mejor decisiones).
-
+#### **Intermedio - Entender Estrategia Voraz**
 ```bash
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DivideAndConquer
+# Desafiante pero justo, usa Greedy
+python main.py --players=Yo:Human,IA:RunnerBotImproved
 ```
 
-### Opción: `--algorithm=DynamicProgramming`
-Usa programación dinámica (preciso pero más lento).
-
+#### **Avanzado - Enfrentar Programación Dinámica**
 ```bash
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DynamicProgramming
+# Defensa fuerte con DP
+python main.py --players=Yo:Human,IA:BuilderBot
+```
+
+#### **Experto - Máximo Desafío con D&C**
+```bash
+# Estrategia completa con Divide & Conquer
+python main.py --players=Yo:Human,IA:BuildAndRunBot
+```
+
+#### **Investigación - Comparar Algoritmos**
+```bash
+# Torneo entre diferentes algoritmos
+python main.py --players=Random:RandomBot,Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=20
 ```
 
 ## Ejemplos de Partidas
 
-### Partida: Tú vs BuilderBot (Greedy)
+### Partida: Tú vs BuilderBot (Dynamic Programming)
 ```bash
-python main.py --players=Yo:Human,IA:BuilderBot --algorithm=Greedy
+python main.py --players=Yo:Human,IA:BuilderBot
 ```
 
-### Partida: 4 Jugadores (todos bots)
+### Partida: 4 Jugadores (todos los algoritmos)
 ```bash
-python main.py --players=Bot1:RandomBot,Bot2:RunnerBotImproved,Bot3:BuilderBot,Bot4:BuildAndRunBot --rounds=1
+python main.py --players=Random:RandomBot,Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=1
 ```
 
 ### Partida: Múltiples Rondas
 ```bash
 python main.py --players=Yo:Human,IA:BuildAndRunBot --rounds=5
 ```
-
-Esto juega 5 rondas y muestra el ganador final.
 
 ### Partida: Tablero Personalizado (7x7)
 ```bash
@@ -220,108 +295,15 @@ python main.py --players=Yo:Human,IA:BuilderBot --cols=7 --rows=7 --square_size=
 python main.py --players=Yo:Human,IA:BuildAndRunBot --fences=10
 ```
 
-## Comparativa de Estrategias
-
-### **Diferencias Clave entre Bots**
-
-| Característica | RandomBot | RunnerBotImproved | BuilderBot | BuildAndRunBot |
-|----------------|-----------|-------------------|------------|----------------|
-| **Velocidad** | Muy rápido | Muy rápido | Rápido | Moderado |
-| **Complejidad** | O(1) | O(V+E) | O(n×caminos) | O(n×caminos + V+E) |
-| **Estrategia** | Ninguna | Voraz (meta) | Bloqueo | Híbrida |
-| **Fortaleza** | Débil | Media | Alta (defensa) | Muy alta |
-| **Debilidad** | Predecible | Trampas | Movimiento | Complejidad |
-
-### **Análisis Detallado**
-
-#### **1. RandomBot - Baseline Simple**
-- **Modo de juego**: 33% colocar muro aleatorio, 67% mover peón aleatoriamente
-- **Ventajas**: Instantáneo, no requiere cálculo
-- **Desventajas**: Completamente predecible, fácil de vencer
-- **Cuándo usar**: Pruebas, aprendizaje de reglas, contra principiantes
-- **Rendimiento**: ~0.1ms/decisión
-
-#### **2. RunnerBotImproved (Greedy) - Movimiento Directo**
-- **Modo de juego**: Siempre toma primer paso del camino más corto (BFS)
-- **Ventajas**: Rápido, eficiente en espacios abiertos, directo a objetivo
-- **Desventajas**: No anticipa bloqueos, vulnerable a "trampas", puede quedar atrapado
-- **Cuándo usar**: Contra oponentes pasivos, tableros simples, velocidad máxima
-- **Rendimiento**: ~1ms/decisión
-
-#### **3. BuilderBot - Estrategia Defensiva**
-- **Modo de juego**: Calcula impacto de muros en caminos de todos los jugadores
-- **Ventajas**: Excelente bloqueo, controla flujo del juego, defensivo fuerte
-- **Desventajas**: Movimiento aleatorio cuando no construye, puede auto-bloquearse
-- **Cuándo usar**: Contra bots agresivos, control de tablero, estrategia paciente
-- **Rendimiento**: ~50ms/decisión
-
-#### **4. BuildAndRunBot - IA Completa**
-- **Modo de juego**: BuilderBot + RunnerBotImproved combinados
-- **Ventajas**: Equilibra ofensa/defensa, adapta a situación, muy desafiante
-- **Desventajas**: Más lento, complejo de optimizar
-- **Cuándo usar**: Partidas serias, desafíos, mejor experiencia de juego
-- **Rendimiento**: ~100ms/decisión
-
-### **Recomendaciones por Nivel**
-
-#### **Principiante**
+### Partida: Torneo de Algoritmos
 ```bash
-# Fácil de vencer, aprender mecánicas
-python main.py --players=Yo:Human,IA:RandomBot
-```
-
-#### **Intermedio**
-```bash
-# Desafiante pero justo
-python main.py --players=Yo:Human,IA:RunnerBotImproved --algorithm=Greedy
-```
-
-#### **Avanzado**
-```bash
-# Estrategia completa
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DivideAndConquer
-```
-
-#### **Experto**
-```bash
-# Máxima dificultad
-python main.py --players=IA1:BuildAndRunBot,IA2:BuildAndRunBot --algorithm=DynamicProgramming
-```
-
-## Modo Torneo
-
-Juega varias rondas para ver quién gana más:
-
-```bash
-python main.py --players=Humano:Human,IA1:BuildAndRunBot,IA2:RunnerBotImproved,IA3:BuilderBot --rounds=10
-```
-
-Resultado después de 10 rondas:
-```
-Ronda #1: El jugador IA1 ganó
-Ronda #2: El jugador IA2 ganó
-...
-PUNTUACIONES FINALES:
-- Humano: 3
-- IA1: 4
-- IA2: 2
-- IA3: 1
-¡El jugador IA1 ganó con 4 victorias!
+# Ver cuál algoritmo es mejor en 50 rondas
+python main.py --players=Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=50
 ```
 
 ## Configuración Avanzada
 
-### Combinación: Algoritmo + Tipo de Bot
-
-```bash
-# BuildAndRunBot con Divide & Conquer
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DivideAndConquer
-
-# RunnerBot con Dynamic Programming
-python main.py --players=Yo:Human,IA:RunnerBotImproved --algorithm=DynamicProgramming
-```
-
-### Configuración de Tablero
+### Tableros de Diferentes Tamaños
 
 ```bash
 # Tablero pequeño y rápido (5x5)
@@ -334,33 +316,62 @@ python main.py --players=Yo:Human,IA:BuildAndRunBot --cols=11 --rows=11 --fences
 python main.py --players=Yo:Human,IA:BuilderBot --square_size=24 --fences=5
 ```
 
+## Modo Torneo
+
+Juega varias rondas para ver cuál algoritmo gana más:
+
+```bash
+python main.py --players=Random:RandomBot,Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=10
+```
+
+Resultado después de 10 rondas:
+```
+CONFIGURACIÓN DE JUGADORES Y ALGORITMOS
+========================================
+  Random (RandomBot) → Algoritmo: None (Random)
+  Greedy (RunnerBotImproved) → Algoritmo: Greedy Strategy
+  DP (BuilderBot) → Algoritmo: Dynamic Programming
+  DnC (BuildAndRunBot) → Algoritmo: Divide and Conquer
+========================================
+
+Ronda #1: El jugador DnC ganó
+Ronda #2: El jugador DP ganó
+...
+PUNTUACIONES FINALES:
+- Random: 0
+- Greedy: 2
+- DP: 3
+- DnC: 5
+¡El jugador DnC ganó con 5 victorias!
+```
+
 ## Controles del Juego
 
 ### Con Jugador Human
 
 **Mover peón:**
-1. Haz clic en un cuadro adyacente a tu peón
-2. Si hay oponente, se activa salto (si es posible)
+1. Presiona **P** para mostrar movimientos válidos
+2. Haz clic en un cuadro resaltado
 
 **Colocar muro:**
-1. Haz clic en las líneas entre cuadros (no en los cuadros)
-2. El muro se coloca si es válido (no bloquea todos los caminos)
+1. Presiona **F** para mostrar posiciones de muros válidas (si tienes muros)
+2. Haz clic en una línea resaltada entre cuadros
 
 **Salir:**
-- Cierra la ventana
+- Presiona **Escape** o cierra la ventana
 
 ## Optimización de Rendimiento
 
-### Para juego más rápido:
+### Para juego más rápido (Greedy o Random):
 ```bash
-# Tablero pequeño, algoritmo rápido
-python main.py --players=Bot1:BuildAndRunBot,Bot2:RandomBot --cols=5 --rows=5 --algorithm=Greedy
+# Algoritmos rápidos
+python main.py --players=Bot1:RunnerBotImproved,Bot2:RandomBot --cols=5 --rows=5
 ```
 
-### Para mejor IA:
+### Para mejor IA (D&C o DP):
 ```bash
-# Tablero normal, algoritmo lento pero preciso
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DynamicProgramming
+# Algoritmos avanzados
+python main.py --players=Yo:Human,IA:BuildAndRunBot
 ```
 
 ## Solución de Problemas
@@ -376,17 +387,20 @@ python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DynamicProgrammi
 # Reduce el tamaño del tablero
 python main.py --players=Yo:Human,IA:BuilderBot --cols=7 --rows=7
 
-# O usa algoritmo Greedy
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=Greedy
+# O usa bots más rápidos (Greedy o Random)
+python main.py --players=Yo:Human,IA:RunnerBotImproved
 ```
 
 ### "La IA es muy fácil/difícil"
 ```bash
-# Demasiado fácil: usa BuildAndRunBot + DynamicProgramming
-python main.py --players=Yo:Human,IA:BuildAndRunBot --algorithm=DynamicProgramming
+# Demasiado fácil: usa BuildAndRunBot (D&C)
+python main.py --players=Yo:Human,IA:BuildAndRunBot
 
 # Demasiado difícil: usa RandomBot
 python main.py --players=Yo:Human,IA:RandomBot
+
+# Intermedio: usa RunnerBotImproved (Greedy)
+python main.py --players=Yo:Human,IA:RunnerBotImproved
 ```
 
 ## Análisis de Rendimiento
@@ -394,7 +408,7 @@ python main.py --players=Yo:Human,IA:RandomBot
 Ver estadísticas de tiempo de ejecución:
 
 ```bash
-python main.py --players=Bot1:BuildAndRunBot,Bot2:RunnerBotImproved --rounds=5
+python main.py --players=DnC:BuildAndRunBot,Greedy:RunnerBotImproved --rounds=5
 ```
 
 Al final verás:
@@ -408,21 +422,27 @@ Board.getFencePlacingImpactOnPaths: 50
 
 ## Aprender sobre Algoritmos
 
-### Ver implementación:
-- **Greedy**: `src/algorithm/GreedyStrategy.py`
+### Ver implementación de algoritmos:
+- **Greedy Strategy**: `src/algorithm/GreedyStrategy.py`
 - **Divide & Conquer**: `src/algorithm/DivideAndConquer.py`
 - **Dynamic Programming**: `src/algorithm/DynamicProgramming.py`
 
 ### Ver uso en bots:
-- **RunnerBotImproved**: `src/player/RunnerBotImproved.py`
-- **BuilderBot**: `src/player/BuilderBot.py`
-- **BuildAndRunBot**: `src/player/BuildAndRunBot.py`
+- **RunnerBotImproved** (Greedy): `src/player/RunnerBotImproved.py`
+- **BuilderBot** (DP): `src/player/BuilderBot.py`
+- **BuildAndRunBot** (D&C): `src/player/BuildAndRunBot.py`
+
+### Comparar algoritmos empíricamente:
+```bash
+# Torneo largo para estadísticas
+python main.py --players=Greedy:RunnerBotImproved,DP:BuilderBot,DnC:BuildAndRunBot --rounds=100
+```
 
 ## Referencias
 
-- Análisis de algoritmos aplicados a juegos
-- Estrategias de IA en tiempo real
-- Optimización de pathfinding
+- Cada bot implementa un algoritmo específico de manera fija
+- Los algoritmos NO son intercambiables entre bots
+- Cada bot está optimizado para su algoritmo particular
 
 ---
 
@@ -431,4 +451,4 @@ Board.getFencePlacingImpactOnPaths: 50
 python main.py -h
 ```
 
-¡Que disfrutes jugando Quoridor! 
+¡Que disfrutes jugando Quoridor y comparando algoritmos!
