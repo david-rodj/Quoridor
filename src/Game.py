@@ -36,6 +36,10 @@ class Game:
             innerSize = int(squareSize/8)
         self.totalFenceCount = totalFenceCount
         self.current_player_index = 0  # Para tracking del jugador actual
+
+        # Estadísticas de rendimiento por jugador
+        self.player_stats = {}  # {player_name: {"actions": int, "total_time": float, "avg_time": float}}
+
         board = Board(self, cols, rows, squareSize, innerSize)
         playerCount = min(int(len(players)/2)*2, 4)
         self.players = []
@@ -50,6 +54,14 @@ class Game:
             players[i].startPosition = board.startPosition(i)
             players[i].endPositions = board.endPositions(i)
             self.players.append(players[i])
+
+            # Inicializar estadísticas para este jugador
+            self.player_stats[players[i].name] = {
+                "actions": 0,
+                "total_time": 0.0,
+                "avg_time": 0.0
+            }
+
         self.board = board
 
     def start(self, roundCount = 1):
@@ -83,9 +95,21 @@ class Game:
                 # Redibujar el tablero para actualizar el indicador de turno
                 if INTERFACE:
                     self.board.draw()
-                
+
+                # Iniciar medición de tiempo para el jugador
+                start_time = time.perf_counter()
+
                 action = player.play(self.board)
-                
+
+                # Calcular tiempo transcurrido
+                elapsed_time = time.perf_counter() - start_time
+
+                # Actualizar estadísticas del jugador
+                stats = self.player_stats[player.name]
+                stats["total_time"] += elapsed_time
+                stats["actions"] += 1
+                stats["avg_time"] = stats["total_time"] / stats["actions"]
+
                 if isinstance(action, PawnMove):
                     player.movePawn(action.toCoord)
                     if player.hasWon():
@@ -97,7 +121,7 @@ class Game:
                 elif isinstance(action, Quit):
                     finished = True
                     print("El jugador %s se rindió" % player.name)
-                
+
                 self.current_player_index = (self.current_player_index + 1) % playerCount
                 
                 if INTERFACE:
@@ -107,7 +131,9 @@ class Game:
         print("PUNTUACIONES FINALES:")
         bestPlayer = self.players[0]
         for player in self.players:
-            print("- %s: %d" % (str(player), player.score))
+            stats = self.player_stats[player.name]
+            print("- %s: %d victorias | %d acciones | %.2fms promedio" %
+                  (str(player), player.score, stats["actions"], stats["avg_time"] * 1000))
             if player.score > bestPlayer.score:
                 bestPlayer = player
         print("¡El jugador %s ganó con %d victorias!" % (bestPlayer.name, bestPlayer.score))
